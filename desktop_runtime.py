@@ -28,7 +28,7 @@ from astra.gameplay import GameSession
 from astra.career_runtime import (career_defaults, initialize_game, before_game_step, advance_game, game_snapshot, dispatch_game)
 from datetime import datetime,timedelta,timezone
 
-DESKTOP_VERSION='2.5.0'
+DESKTOP_VERSION='2.5.1'
 
 
 def unit(v):

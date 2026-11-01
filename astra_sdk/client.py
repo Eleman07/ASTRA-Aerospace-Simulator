@@ -12,7 +12,7 @@ from urllib.error import HTTPError,URLError
 from urllib.parse import urlencode
 from urllib.request import Request,urlopen
 
-CLIENT_VERSION='2.5.0'
+CLIENT_VERSION='2.5.1'
 
 class AstraClient:
     def __init__(self,base_url=None,timeout_s=30):

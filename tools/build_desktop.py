@@ -14,8 +14,8 @@ import sys
 import zipfile
 
 ROOT=Path(__file__).resolve().parents[1]
-VERSION='2.5.0'
-SDK_VERSION='2.5.0'
+VERSION='2.5.1'
+SDK_VERSION='2.5.1'
 TOOLCHAIN=ROOT/'build/toolchain/godot'
 PAYLOAD=ROOT/f'dist/ASTRA-Desktop-{VERSION}'
 

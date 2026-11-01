@@ -1,0 +1,60 @@
+{
+  "version": "2.5.1",
+  "sas_tests": 14,
+  "python_tests": 127,
+  "skipped": 2,
+  "package": {
+    "adapter": "NVIDIA GeForce RTX 5080 Laptop GPU",
+    "api_url": "http://127.0.0.1:61857",
+    "browser_required": false,
+    "fps": 30.0,
+    "frame_p95_ms": 33.3333333333333,
+    "frames": 900,
+    "native": true,
+    "physics_clock_owner": "external",
+    "renderer": "forward_plus",
+    "scenario": "mission",
+    "science_disciplines": 13,
+    "screenshot_saved": true,
+    "solvers": 18,
+    "time_s": 0.4,
+    "vehicle": "drone",
+    "frozen_host": "PASS",
+    "offline_wheel": "PASS",
+    "wheel_import_path": "C:\\ASTRA-Aerospace-Simulator\\test-results\\desktop-sdk-installed\\astra\\client.py",
+    "free_flight_api": "PASS",
+    "detailed_instruments_api": "PASS",
+    "independent_sdk": "PASS",
+    "legacy_module_collision": "PASS",
+    "game_activities": [
+      "aircraft",
+      "drone",
+      "space"
+    ],
+    "game_missions": 12,
+    "career_categories": {
+      "INGEGNERIA": 3,
+      "ESPLORAZIONE": 3,
+      "PILOTAGGIO": 3,
+      "SCIENZA": 3
+    },
+    "exact_external_clock": "PASS",
+    "python_mode": "PASS",
+    "camera_api": "PASS",
+    "real_png_capture": {
+      "id": "a31106ac6bcbe4b374a46755",
+      "path": "C:\\ASTRA-Aerospace-Simulator\\test-results\\sdk-real-capture.png",
+      "include_ui": false,
+      "status": "CAPTURED",
+      "error": "",
+      "bytes": 400242,
+      "width": 1440,
+      "height": 900
+    },
+    "presentation_does_not_advance_physics": true,
+    "desktop_version": "2.5.1",
+    "host_sha256": "f9d3ba587404ba382c7c21a22a6f9a3a7881a3f9a6a63f287b89f739db3e1cde",
+    "renderer_sha256": "6fb4f141750a01057b506037f14d23cd64cb63b056e7c11556f8c9dd799cbe20",
+    "sdk_sha256": "66cac3977a5653433c4f3f964a694698645aeedc59b5b779e6084a234515558f"
+  }
+}

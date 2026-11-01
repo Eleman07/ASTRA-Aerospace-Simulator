@@ -2,9 +2,9 @@
 
 Simulatore aerospaziale **nativo per Windows 11 x64**, utilizzabile offline. Motore scientifico Python, grafica 3D Godot, tastiera, controller e API per controllare la stessa simulazione da script.
 
-**Desktop 2.5.0 · SDK Python 2.5.0 · release Windows x64.**
+**Desktop 2.5.1 · SDK Python 2.5.1 · release Windows x64.**
 
-[Scarica l’installer Windows](https://github.com/Eleman07/ASTRA-Aerospace-Simulator/releases/download/v2.5.0-desktop/ASTRA-Desktop-2.5.0-Windows-x64-Setup.exe) · [Scarica il wheel Python](https://github.com/Eleman07/ASTRA-Aerospace-Simulator/releases/download/v2.5.0-desktop/astra_simulator_client-2.5.0-py3-none-any.whl) · [Note della release](https://github.com/Eleman07/ASTRA-Aerospace-Simulator/releases/tag/v2.5.0-desktop)
+[Scarica l’installer Windows](https://github.com/Eleman07/ASTRA-Aerospace-Simulator/releases/download/v2.5.1-desktop/ASTRA-Desktop-2.5.1-Windows-x64-Setup.exe) · [Scarica il wheel Python](https://github.com/Eleman07/ASTRA-Aerospace-Simulator/releases/download/v2.5.1-desktop/astra_simulator_client-2.5.1-py3-none-any.whl) · [Note della release](https://github.com/Eleman07/ASTRA-Aerospace-Simulator/releases/tag/v2.5.1-desktop)
 
 ![ASTRA Desktop: veicolo orbitale, Terra e nebulosa azzurra](docs/images/desktop-2.4.1-space.webp)
 
@@ -18,7 +18,7 @@ Musica: **“Horizons” di Scott Buckley**, pubblicata in [CC BY 4.0](https://c
 
 ## Installare e avviare
 
-1. Scarica `ASTRA-Desktop-2.5.0-Windows-x64-Setup.exe` dagli asset della release.
+1. Scarica `ASTRA-Desktop-2.5.1-Windows-x64-Setup.exe` dagli asset della release.
 2. Chiudi eventuali istanze precedenti di ASTRA e avvia l’installer.
 3. Apri **ASTRA Desktop** dal menu Start. Il simulatore include motore, modelli, texture e audio: non richiede Internet, browser o Python installato.
 4. Usa il profilo principale su GPU Vulkan; se necessario scegli **Grafica leggera** per il backend OpenGL. Aggiorna il driver della GPU se il renderer non si avvia.
@@ -83,7 +83,7 @@ Da **GRAFICA** seleziona Basso/Medio/Alto/Ultra/Ultra Cinema e regola esposizion
 È richiesto **Python 3.10 o successivo** solo per usare gli script. Scarica il wheel della stessa release e installalo con l’interprete usato dal tuo editor:
 
 ```powershell
-python -m pip install --no-index --upgrade --force-reinstall --no-deps .\astra_simulator_client-2.5.0-py3-none-any.whl
+python -m pip install --no-index --upgrade --force-reinstall --no-deps .\astra_simulator_client-2.5.1-py3-none-any.whl
 ```
 
 Con ASTRA Desktop aperto:
@@ -152,7 +152,7 @@ Modelli, autori, licenze e modifiche sono elencati in [ASSET-CREDITS.md](ASSET-C
 Le release desktop distribuiscono **installer Windows e SDK Python**. Questa guida sostituisce le precedenti istruzioni della Browser Edition; i vecchi link PWA, diagnostica browser e wheel 1.3 non sono il percorso d’installazione del desktop.
 
 
-## Aggiornamento 2.5.0
+## Aggiornamento 2.5.1
 
 SAS compatto: T attiva/disattiva, Z/X cambia preset; joystick RB e pressione
 stick destro, configurabili. Anello e marker originali, intervento manuale
@@ -169,3 +169,5 @@ escludendo ID e testo. [Template e limiti](docs/MISSIONI.md).
 Materiali con microdettagli procedurali, luce di riflesso blu, ombre a quattro
 cascate e Ultra Cinema a scala 1,5. [Confronto grafico e prestazioni](docs/GRAPHICS-UPGRADE.md).
 Le immagini precedenti 2.4.1 restano archiviate con il proprio numero di versione.
+
+SAS 2.5.1: pannello sempre visibile e attivabile su ogni veicolo. Fuori orbita Stability Assist mantiene i riferimenti locali di assetto tramite gli attuatori esistenti; gli input manuali aggiornano il riferimento, mantenuto al rilascio. Non controlla automaticamente quota o manetta.

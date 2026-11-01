@@ -1,6 +1,6 @@
 # SAS orbitale
 
-Il pulsante **SAS ON/OFF** è visibile nel volo orbitale di SIMULATORE e GIOCA.
+Il pulsante **SAS ON/OFF** è sempre visibile e attivabile in SIMULATORE e GIOCA.
 **T** attiva il mantenimento dell'assetto corrente; **Z/X** scorrono i preset
 validi. L'anello offre Stability Assist, Prograde, Retrograde, Normal,
 Anti-Normal, Radial In/Out, Target/Anti-Target e Maneuver Node.
@@ -38,8 +38,7 @@ Il controllore integra il quaternione e le velocità angolari con coppia e
 momento angolare limitati dalle ruote di reazione del modello Python. Una
 rotazione di 180° richiede tempo fisico. Queste ruote non consumano carburante
 RCS: la telemetria lo dichiara, senza inventare un attuatore a propellente.
-L'SAS generico è nascosto su aereo, UAV e lander: i loro controllori esistenti
-restano disponibili, ma non sono presentati come un nuovo autopilota SAS.
+Su lanciatore, aereo, UAV e lander è disponibile Stability Assist: mantiene i riferimenti locali di assetto tramite i controllori fisici esistenti. Gli input manuali aggiornano il riferimento mantenuto al rilascio. Non è un controllo automatico di quota, posizione o manetta. I preset direzionali sono orbitali.
 
 Verifica: `python -m unittest tools.test_orbital_sas` e
 `python tools/test_input_routing.py`. Le prove di GUI iniettano eventi reali

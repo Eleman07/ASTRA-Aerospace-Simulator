@@ -28,6 +28,6 @@ func run():
     assert(app.sas_hud.mode_buttons.prograde.visible and app.sas_hud.mode_buttons.prograde.button_pressed)
     assert(not app.sas_hud.mode_buttons.target.visible and not app.sas_hud.mode_buttons.maneuver_node.visible)
     app.sas_hud.update_state({"supported":false})
-    assert(not app.sas_hud.visible)
+    assert(app.sas_hud.visible)
     print("GIOCA UI PASS: 3 activity choices, career board entry, simulator list preserved, orbital SAS choices available")
     quit()

@@ -135,9 +135,25 @@ class OrbitalSASTests(unittest.TestCase):
             self.assertEqual(self.engine.command, original)
         for vehicle, scenario in (("aircraft", "mission"), ("drone", "mission"), ("space", "planetary")):
             self.engine.reset(vehicle, scenario, advanced_models=True)
-            self.assertFalse(self.engine.state()["sas"]["supported"])
-            with self.assertRaises(ValueError):
-                self.engine.set_command({"sas_enabled": True})
+            self.assertTrue(self.engine.state()["sas"]["supported"])
+            self.assertTrue(self.engine.set_command({"sas_enabled": True})["sas"]["enabled"])
+
+    def test_local_sas_latches_pilot_reference_at_release(self):
+        for vehicle, scenario in (("space", "mission"), ("space", "planetary"), ("aircraft", "mission"), ("drone", "mission")):
+            self.engine.reset(vehicle, scenario, advanced_models=True)
+            self.engine.set_command({"mode":"manual", "sas_enabled":True})
+            self.engine.set_command({"roll_deg":7, "pitch_deg":4, "sas_manual_input":True})
+            result=self.engine.set_command({"roll_deg":0, "pitch_deg":0, "sas_manual_input":False})
+            self.assertEqual(result["command"]["roll_deg"],7)
+            self.assertEqual(result["command"]["pitch_deg"],4)
+            self.assertFalse(result["sas"]["manual_override"])
+            self.engine.launch()
+            state=self.engine.step(.1)
+            self.assertTrue(state["sas"]["enabled"])
+            self.assertTrue(all(math.isfinite(v) for v in state.get("attitude_deg",[])))
+            self.engine.set_command({"sas_enabled":False})
+            result=self.engine.set_command({"roll_deg":0,"pitch_deg":0})
+            self.assertEqual(result["command"]["roll_deg"],0)
 
     def test_sdk_helpers_and_status_use_same_controller(self):
         runtime = DesktopRuntime()
@@ -152,8 +168,7 @@ class OrbitalSASTests(unittest.TestCase):
             self.assertFalse(client.sas_enable(False)["sas"]["enabled"])
             self.assertEqual(client.orbital_attitude("prograde")["sas"]["mode"], "prograde")
             client.reset("aircraft")
-            with self.assertRaises(ValueError):
-                client.sas_mode("stability_assist")
+            self.assertTrue(client.sas_mode("stability_assist")["sas"]["enabled"])
 
 
 class SASDynamicsTests(unittest.TestCase):

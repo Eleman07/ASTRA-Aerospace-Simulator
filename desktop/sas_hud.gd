@@ -41,13 +41,13 @@ func _ready():
 
 func update_state(data):
     telemetry=data
-    visible=bool(data.get("supported",false))
+    visible=true
     if toggle_button==null:return
     var enabled=bool(data.get("enabled",false))
     toggle_button.text="● SAS ON  [T]" if enabled else "○ SAS OFF  [T]"
     toggle_button.modulate=Color(.46,1,.8) if enabled else Color(.78,.84,.92)
     var mode=str(data.get("mode","stability_assist"))
-    status_label.text="INPUT MANUALE · SAS IN ATTESA" if data.get("manual_override",false) else "SAS · "+mode.replace("_"," ").to_upper() if enabled else "GNC LVLH" if data.get("authority")=="gnc" else "ASSETTO INERZIALE · SAS OFF"
+    status_label.text="INPUT MANUALE · SAS IN ATTESA" if data.get("manual_override",false) else "SAS · "+mode.replace("_"," ").to_upper() if enabled else "GNC AUTO" if data.get("authority")=="gnc" else "STABILIZZAZIONE · SAS OFF"
     for key in mode_buttons:
         mode_buttons[key].visible=key in data.get("available_modes",[])
         mode_buttons[key].set_pressed_no_signal(enabled and key==mode)

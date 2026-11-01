@@ -622,7 +622,7 @@ func update_hud():
     widgets.game_checkpoint.text=mission_text("checkpoint")
     widgets.game_restore.text=mission_text("restore")
     widgets.game_retry.text=mission_text("retry")
-    sas_selection.visible=bool(state.get("sas",{}).get("supported",false))
+    sas_selection.visible=true
     if game_mode:
         if game_state.get("active",false):
             var active_mission=game_state.mission
@@ -849,6 +849,8 @@ func collect_pilot(dt):
         if command.has("disconnected"):
             automatic()
             return {}
+    if not command.is_empty() and scenario!="orbital":
+        command.sas_manual_input=pilot.smooth_axes.length()>.01 if pilot.armed else (Input.is_key_pressed(KEY_W) or Input.is_key_pressed(KEY_S) or Input.is_key_pressed(KEY_A) or Input.is_key_pressed(KEY_D) or Input.is_key_pressed(KEY_Q) or Input.is_key_pressed(KEY_E))
     return command
 
 func send_pilot():

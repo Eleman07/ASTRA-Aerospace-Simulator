@@ -1190,6 +1190,27 @@ class SimulationEngine:
             elif (self.command["mode"] == "auto" and
                   self.external_control["state"] == "MANUAL_OVERRIDE"):
                 self.external_control["state"] = "DISARMED"
+        if self.vehicle != "space" or self.scenario != "orbital":
+            if self.command.get("sas_enabled") and self.command["mode"] != "auto":
+                keys = ("roll_deg", "pitch_deg", "yaw_deg")
+                engaging = payload.get("sas_enabled", False) or payload.get("attitude_sas_mode") == "stability_assist"
+                override = payload.get("sas_manual_input", any(key in payload for key in keys))
+                previous = getattr(self, "_local_sas_override", False)
+                if engaging or not hasattr(self, "_local_sas_hold"):
+                    self._local_sas_hold = {key: self.command[key] for key in keys}
+                    override = False
+                elif override:
+                    self._local_sas_hold = {key: self.command[key] for key in keys}
+                elif previous:
+                    # The last pilot reference is retained at release. Existing
+                    # bounded actuators continue integrating physical attitude.
+                    pass
+                if not override:
+                    self.command.update(self._local_sas_hold)
+                self._local_sas_override = bool(override)
+            else:
+                self._local_sas_override = False
+                if hasattr(self, "_local_sas_hold"):del self._local_sas_hold
         return self.state()
 
     def _validated_sas_command(self, payload: dict[str, Any]) -> dict[str, Any]:
@@ -1203,6 +1224,11 @@ class SimulationEngine:
         toggled = "sas_enabled" in command
         if toggled and not isinstance(command["sas_enabled"], bool):
             raise ValueError("sas_enabled must be boolean")
+        if "sas_manual_input" in command and not isinstance(command["sas_manual_input"], bool):
+            raise ValueError("sas_manual_input must be boolean")
+        if (self.vehicle != "space" or self.scenario != "orbital") and named:
+            if command["attitude_sas_mode"] not in {"manual", "stability_assist"}:
+                raise ValueError("This vehicle supports Stability Assist; directional presets require orbit")
         direction = command.get("maneuver_direction_eci", self.command.get("maneuver_direction_eci"))
         if "maneuver_direction_eci" in command and direction is not None:
             if (not isinstance(direction, (list, tuple)) or len(direction) != 3 or
@@ -1234,8 +1260,6 @@ class SimulationEngine:
             # exception or silently continuing to point at a deleted vector.
             command["attitude_sas_mode"] = "stability_assist"
         if toggled and command["sas_enabled"]:
-            if self.vehicle != "space" or self.scenario != "orbital":
-                raise ValueError("SAS is available for the orbital reaction-wheel controller")
             command.setdefault("mode", "manual")
             if command["mode"] == "auto":
                 raise ValueError("SAS and autonomous GNC cannot own attitude simultaneously")
@@ -1260,9 +1284,13 @@ class SimulationEngine:
     def _sas_state(self) -> dict[str, Any]:
         supported = self.vehicle == "space" and self.scenario == "orbital"
         if not supported or self.spacecraft_attitude is None:
-            return dict(supported=False, enabled=False, mode="manual", available_modes=[],
-                        manual_override=False, authority="unsupported", markers={},
-                        reason="ORBITAL_REACTION_WHEEL_CONTROLLER_ONLY")
+            enabled = bool(self.command.get("sas_enabled")) and self.command["mode"] != "auto"
+            return dict(supported=True, enabled=enabled, mode="stability_assist",
+                        available_modes=["stability_assist"], markers={},
+                        manual_override=enabled and getattr(self, "_local_sas_override", False),
+                        authority="gnc" if self.command["mode"] == "auto" else "pilot",
+                        actuator="existing_vehicle_attitude_controller",
+                        reference="LOCAL_ATTITUDE_SETPOINT_HOLD")
         attitude = self.spacecraft_attitude
         radial = [v/_norm3(self.orbit[:3]) for v in self.orbit[:3]]
         speed = _norm3(self.orbit[3:])

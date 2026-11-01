@@ -53,3 +53,8 @@ PASS: exported frozen host, installed offline SDK2.5.0, external clock, camera P
 Graphics: original normal-map microdetails, clearcoat, four shadow cascades, earthshine toggle, Cinema1.5 and frame-time. Before/after5views and5preset reports in docs/validation/graphics-upgrade. Protected nebula/stars source and isolated sky PNG identical for4existing profiles. Float camera tolerance1e-6relative at planetary distances. RTX5080Laptop1440x900 renderer-only paused-state sample, concurrent CPU verification may affect measurements; no midrange-GPU or whole-game performance guarantee.
 NOT DELIVERED: full AAA visual overhaul, volumetric clouds/new city map/lunar DEM/new camera blur/grain/chromatic effects; existing planetary and VFX systems retained. Full limitations docs/GRAPHICS-UPGRADE.md. No new online assets.
 Save compatibility: legacy IDs/career retained; seeds+measured mission state only, physical checkpoints current-process memory only. No SAS atmospheric hold or propellant-driven orbital RCS invented. No physical gamepad hardware test.
+
+
+2026-11-01 — Desktop2.5.1 SAS always visible/available
+SAS panel always visible in SIMULATORE/GIOCA. Launch, aircraft, UAV and lunar lander expose Stability Assist using existing physical vehicle attitude controllers; manual input updates retained local setpoints on release. This does not hold altitude/position/throttle. Orbital directional modes remain contextual.
+PASS14 SAS tests incl all four additional contexts, override/release/disable and finite physical integration. PASS127 Python tests (125passed,2installer opt-in skipped). PASS native input routing and game UI. PASS frozen host/renderer/installed SDK camera and physics clock test. Installer integration recorded separately in sas251-installer-test.log.
