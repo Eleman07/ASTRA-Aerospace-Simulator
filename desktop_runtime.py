@@ -28,7 +28,7 @@ from astra.gameplay import GameSession
 from astra.career_runtime import (career_defaults, initialize_game, before_game_step, advance_game, game_snapshot, dispatch_game)
 from datetime import datetime,timedelta,timezone
 
-DESKTOP_VERSION='2.5.1'
+DESKTOP_VERSION='2.5.2'
 
 
 def unit(v):
@@ -149,7 +149,12 @@ class DesktopRuntime:
             if not math.isfinite(value):raise ValueError('pitch_deg must be finite')
             # The native launch attitude control exposes vertical 90 degrees.
             # This corrects the old UI's ±45-degree command clipping only.
-            self.engine.command['pitch_deg']=max(-45.,min(90.,value))
+            local_hold=self.engine.command.get('sas_enabled',False)
+            manual_input=command.get('sas_manual_input',True)
+            if not local_hold or manual_input:
+                self.engine.command['pitch_deg']=max(-45.,min(90.,value))
+                if local_hold and hasattr(self.engine,'_local_sas_hold'):
+                    self.engine._local_sas_hold['pitch_deg']=self.engine.command['pitch_deg']
             result=self.engine.state()
         return result
 

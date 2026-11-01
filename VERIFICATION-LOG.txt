@@ -58,3 +58,5 @@ Save compatibility: legacy IDs/career retained; seeds+measured mission state onl
 2026-11-01 — Desktop2.5.1 SAS always visible/available
 SAS panel always visible in SIMULATORE/GIOCA. Launch, aircraft, UAV and lunar lander expose Stability Assist using existing physical vehicle attitude controllers; manual input updates retained local setpoints on release. This does not hold altitude/position/throttle. Orbital directional modes remain contextual.
 PASS14 SAS tests incl all four additional contexts, override/release/disable and finite physical integration. PASS127 Python tests (125passed,2installer opt-in skipped). PASS native input routing and game UI. PASS frozen host/renderer/installed SDK camera and physics clock test. Installer integration recorded separately in sas251-installer-test.log.
+
+2026-11-01 — Desktop2.5.2 followup: corrected native launch pitch90-degree compatibility override bypassing SAS latch. PASS15SAS+19runtime=34tests, native input routing; frozen-host/SDK/camera package PASS. Installer integrity test run on final2.5.2 artifact. No orbital physics or mission templates changed.

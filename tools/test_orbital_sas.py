@@ -138,6 +138,14 @@ class OrbitalSASTests(unittest.TestCase):
             self.assertTrue(self.engine.state()["sas"]["supported"])
             self.assertTrue(self.engine.set_command({"sas_enabled": True})["sas"]["enabled"])
 
+    def test_launch_desktop_pitch_hold_survives_neutral_input(self):
+        runtime=DesktopRuntime()
+        runtime.dispatch('/desktop/free',{'vehicle':'space'},'POST')
+        runtime._command({'sas_enabled':True})
+        runtime._command({'pitch_deg':75,'sas_manual_input':True})
+        state=runtime._command({'pitch_deg':90,'sas_manual_input':False})
+        self.assertEqual(state['command']['pitch_deg'],75)
+
     def test_local_sas_latches_pilot_reference_at_release(self):
         for vehicle, scenario in (("space", "mission"), ("space", "planetary"), ("aircraft", "mission"), ("drone", "mission")):
             self.engine.reset(vehicle, scenario, advanced_models=True)
