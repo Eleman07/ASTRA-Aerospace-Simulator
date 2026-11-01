@@ -23,13 +23,13 @@ def main():
     from astra_sdk import AstraClient as IndependentClient
     import astra.client
     assert Path(astra.client.__file__).is_relative_to(target)
-    assert CLIENT_VERSION=='2.4.1'
+    assert CLIENT_VERSION=='2.5.0'
     assert IndependentClient is AstraClient and hasattr(AstraClient,'pause')
     # A stale astra package earlier on sys.path must not shadow the new SDK.
     collision=ROOT/'test-results/sdk-shadow';(collision/'astra').mkdir(parents=True,exist_ok=True)
     (collision/'astra/__init__.py').write_text('',encoding='utf-8')
     (collision/'astra/client.py').write_text('class AstraClient: pass\n',encoding='utf-8')
-    probe="import sys;sys.path.insert(0,"+repr(str(target))+");sys.path.insert(0,"+repr(str(collision))+");import astra.client as old;assert not hasattr(old.AstraClient,'pause');from astra_sdk import AstraClient,CLIENT_VERSION;assert hasattr(AstraClient,'pause');assert CLIENT_VERSION=='2.4.1';print(AstraClient.client_info())"
+    probe="import sys;sys.path.insert(0,"+repr(str(target))+");sys.path.insert(0,"+repr(str(collision))+");import astra.client as old;assert not hasattr(old.AstraClient,'pause');from astra_sdk import AstraClient,CLIENT_VERSION;assert hasattr(AstraClient,'pause');assert CLIENT_VERSION=='2.5.0';print(AstraClient.client_info())"
     subprocess.run([sys.executable,'-B','-c',probe],cwd=collision,check=True)
     with socket.socket() as probe:
         probe.bind(('127.0.0.1',0));port=probe.getsockname()[1]

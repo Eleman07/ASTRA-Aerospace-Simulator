@@ -20,6 +20,14 @@ def flight_details(state):
     if quat:
         for label,value in zip(('Quaternion w','Quaternion x','Quaternion y','Quaternion z'),quat):row(att,label,value)
     if 'attitude_error_deg' in state:row(att,'Errore di assetto',state['attitude_error_deg'],'°')
+    sas=state.get('sas',{})
+    if sas.get('supported'):
+        row(att,'SAS','OVERRIDE MANUALE' if sas.get('manual_override') else 'ON' if sas.get('enabled') else 'OFF')
+        row(att,'Preset SAS',sas.get('mode'))
+        row(att,'Autorità assetto',sas.get('authority'))
+        row(att,'Attuatore SAS',sas.get('actuator'))
+        row(att,'Limite coppia ruote',sas.get('torque_limit_N_m'),'N·m')
+        row(att,'Momento ruote',state.get('wheel_momentum_body_N_m_s'),'N·m·s')
     pos=group('position','POSIZIONE E VELOCITÀ','Stato fisico · '+frame+'. ECI inerziale; NED Nord/Est/Giù; ENU Est/Nord/Su.')
     xyz=state.get('position_enu_m') if lunar else state.get('position_eci_m') if space else state.get('position_ned_m')
     axes=('Est','Nord','Su') if lunar else ('X ECI','Y ECI','Z ECI') if space else ('Nord','Est','Giù')

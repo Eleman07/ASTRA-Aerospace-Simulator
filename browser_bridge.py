@@ -36,6 +36,7 @@ def route_raw(raw):
                       'execution_mode': 'browser-pyodide',
                       'vehicle': engine.vehicle, 'model': st.get('model'),
                       'time_s':st.get('time_s'),
+                      'sas':st.get('sas'),
                       'capabilities':['spacecraft','aircraft','uav','rk4','si-units',
                                       'browser-local-engine','gnc','engineering-studio']}
         elif endpoint == '/models':

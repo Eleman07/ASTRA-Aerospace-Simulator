@@ -12,7 +12,7 @@ from urllib.error import HTTPError,URLError
 from urllib.parse import urlencode
 from urllib.request import Request,urlopen
 
-CLIENT_VERSION='2.4.1'
+CLIENT_VERSION='2.5.0'
 
 class AstraClient:
     def __init__(self,base_url=None,timeout_s=30):
@@ -60,6 +60,22 @@ class AstraClient:
         if torque_body_fraction is not None:
             payload['attitude_torque_body_fraction']=torque_body_fraction
         return self.command(**payload)
+    def sas_enable(self,enabled=True):
+        """Engage current inertial attitude hold, or release the SAS actuator.
+
+        Available in orbital flight. Enabling hands attitude to the pilot/SAS;
+        ``command(mode='auto')`` explicitly returns authority to the GNC.
+        """
+        if not isinstance(enabled,bool):raise ValueError('enabled must be boolean')
+        return self.command(mode='manual',sas_enabled=enabled)
+    def sas_mode(self,mode='stability_assist',**kwargs):
+        """Select/enable a contextual SAS preset; see state()['sas'] for modes.
+
+        Manual body torque temporarily overrides directional guidance. All
+        presets use the same bounded reaction wheels as orbital_attitude().
+        """
+        kwargs.setdefault('sas_enabled',mode!='manual')
+        return self.orbital_attitude(mode,**kwargs)
     def stage(self):return self._request('/api/v1/stage',{})
     def engineering(self,analysis,**kwargs):return self._request('/api/v1/engineering',{'analysis':analysis,**kwargs})
     def engineering_live(self,analysis,**kwargs):return self._request('/api/v1/engineering/live',{'analysis':analysis,**kwargs})
@@ -96,12 +112,22 @@ class AstraClient:
     def free_flight(self,vehicle='space',scenario='mission',**kwargs):
         """Reset into free flight, paused and manual; play() starts the clock."""
         return self._request('/api/v1/desktop/free',dict(vehicle=vehicle,scenario=scenario,**kwargs))
-    def game_catalog(self,vehicle=None):
-        """Return the three career activities and their measured missions."""
-        return self._request('/api/v1/desktop/game/catalog',{} if vehicle is None else {'vehicle':vehicle})
-    def start_game_mission(self,mission_id):
+    def game_catalog(self,vehicle=None,**filters):
+        """Legacy story catalog; source='all' adds paged procedural Gioca contracts.
+
+        Optional filters: language, query, difficulty, family, max_duration_s,
+        source, sort, offset, limit. Existing positional calls are unchanged.
+        """
+        return self._request('/api/v1/desktop/game/catalog',dict(filters,**({} if vehicle is None else {'vehicle':vehicle})))
+    def start_game_mission(self,mission_id,**options):
         """Load a Gioca career mission paused; call play() to begin its clock."""
-        return self._request('/api/v1/desktop/game/start',{'mission_id':mission_id})
+        return self._request('/api/v1/desktop/game/start',dict(options,mission_id=mission_id))
+    def retry_game_mission(self):return self._request('/api/v1/desktop/game/retry',{})
+    def next_game_mission(self):return self._request('/api/v1/desktop/game/next',{})
+    def game_checkpoint(self,restore=False):
+        return self._request('/api/v1/desktop/game/checkpoint',{'action':'restore' if restore else 'save'})
+    def favorite_game_mission(self,mission_id,favorite=True):
+        return self._request('/api/v1/desktop/game/favorite',{'mission_id':mission_id,'favorite':favorite})
     def game_state(self):return self._request('/api/v1/desktop/game/state')
     def game_career(self):return self._request('/api/v1/desktop/game/career')
     def upgrade_facility(self,facility):

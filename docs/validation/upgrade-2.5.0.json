@@ -1,0 +1,87 @@
+{
+  "version": "2.5.0",
+  "python_suite": {
+    "tests": 126,
+    "passed": 124,
+    "skipped": 2
+  },
+  "javascript_tests": 27,
+  "package": {
+    "adapter": "NVIDIA GeForce RTX 5080 Laptop GPU",
+    "api_url": "http://127.0.0.1:54042",
+    "browser_required": false,
+    "fps": 30.0,
+    "frame_p95_ms": 33.3333333333333,
+    "frames": 926,
+    "native": true,
+    "physics_clock_owner": "external",
+    "renderer": "forward_plus",
+    "scenario": "mission",
+    "science_disciplines": 13,
+    "screenshot_saved": true,
+    "solvers": 18,
+    "time_s": 0.4,
+    "vehicle": "drone",
+    "frozen_host": "PASS",
+    "offline_wheel": "PASS",
+    "wheel_import_path": "C:\\ASTRA-Aerospace-Simulator\\test-results\\desktop-sdk-installed\\astra\\client.py",
+    "free_flight_api": "PASS",
+    "detailed_instruments_api": "PASS",
+    "independent_sdk": "PASS",
+    "legacy_module_collision": "PASS",
+    "game_activities": [
+      "aircraft",
+      "drone",
+      "space"
+    ],
+    "game_missions": 12,
+    "career_categories": {
+      "INGEGNERIA": 3,
+      "ESPLORAZIONE": 3,
+      "PILOTAGGIO": 3,
+      "SCIENZA": 3
+    },
+    "exact_external_clock": "PASS",
+    "python_mode": "PASS",
+    "camera_api": "PASS",
+    "real_png_capture": {
+      "id": "6620de36befe263177932f50",
+      "path": "C:\\ASTRA-Aerospace-Simulator\\test-results\\sdk-real-capture.png",
+      "include_ui": false,
+      "status": "CAPTURED",
+      "error": "",
+      "bytes": 365476,
+      "width": 1440,
+      "height": 900
+    },
+    "presentation_does_not_advance_physics": true,
+    "desktop_version": "2.5.0",
+    "host_sha256": "e2b7afb3b35119ddf2ad133e4be69256817ee526ef7d406605a1ecc35471f8d9",
+    "renderer_sha256": "a32954953b014c67afb66d86d2dbb77dffd3f37825020c207d2f5706c730e024",
+    "sdk_sha256": "232c93b26c80f5a17a50c5f020233adcf161a05b469cdaa5616f72637493b393"
+  },
+  "installer": {
+    "version": "2.5.0",
+    "installer": "ASTRA-Desktop-2.5.0-Windows-x64-Setup.exe",
+    "bytes": 182580226,
+    "sha256": "b35a24683777b3b2f6a015c5bb180913a6a1d37c95a3803a3f46a23a28d87e45",
+    "payload_manifest_sha256": "b83495c0e470722def982bc53fc3e102cec9126dcbee418bb21946aa954b20c3",
+    "runtime_self_test": "PASS",
+    "installer_test": "PASS",
+    "sdk": "astra_simulator_client-2.5.0-py3-none-any.whl",
+    "sdk_sha256": "232c93b26c80f5a17a50c5f020233adcf161a05b469cdaa5616f72637493b393",
+    "installed_files_verified": 155,
+    "uninstaller_test": "PASS",
+    "user_files_preserved": true
+  },
+  "source_files_sha256": {
+    "desktop/main.gd": "3374eada4fa1ad2ea0efe9c839fc28b197a4d030f0f9a80849d16d93d997944a",
+    "desktop/native_scene.gd": "fe140c4b1206fdc70e94eeed687415568141180cbf3ef601b2cf197191a9882d",
+    "desktop/vehicle_assets.gd": "f856d1b99ca30945d2afd517bf07065619581bb7f5dc16bbe53707c5a70dbbce",
+    "astra/engine.py": "21c788885a605e4a6cafdddb1d024549e84da18a79d1c6000478ab87b88a40e3",
+    "astra/attitude.py": "33c1b20d901506bc629b915842caff102105194af4f346b5bbfcf222fc80a774",
+    "astra/gameplay.py": "bd8afc93191215b0762bc0b3ff18dc36ffe24ede6825cd1a1db57492f65ba2e1",
+    "astra/procedural_missions.py": "e2b0c8996741627d02db768307feb297cc89488e5a51464947b3940687f63b8e",
+    "astra/career_runtime.py": "b2ecce46f34a443119b78520019d04221fb9671f8f3b0567eb7a4f405238c68e"
+  }
+}

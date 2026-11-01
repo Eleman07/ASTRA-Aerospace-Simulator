@@ -2,9 +2,9 @@
 
 Simulatore aerospaziale **nativo per Windows 11 x64**, utilizzabile offline. Motore scientifico Python, grafica 3D Godot, tastiera, controller e API per controllare la stessa simulazione da script.
 
-**Desktop 2.4.1 · SDK Python 2.4.1 · release Windows x64.**
+**Desktop 2.5.0 · SDK Python 2.5.0 · release Windows x64.**
 
-[Scarica l’installer Windows](https://github.com/Eleman07/ASTRA-Aerospace-Simulator/releases/download/v2.4.1-desktop/ASTRA-Desktop-2.4.1-Windows-x64-Setup.exe) · [Scarica il wheel Python](https://github.com/Eleman07/ASTRA-Aerospace-Simulator/releases/download/v2.4.1-desktop/astra_simulator_client-2.4.1-py3-none-any.whl) · [Note della release](https://github.com/Eleman07/ASTRA-Aerospace-Simulator/releases/tag/v2.4.1-desktop)
+[Scarica l’installer Windows](https://github.com/Eleman07/ASTRA-Aerospace-Simulator/releases/download/v2.5.0-desktop/ASTRA-Desktop-2.5.0-Windows-x64-Setup.exe) · [Scarica il wheel Python](https://github.com/Eleman07/ASTRA-Aerospace-Simulator/releases/download/v2.5.0-desktop/astra_simulator_client-2.5.0-py3-none-any.whl) · [Note della release](https://github.com/Eleman07/ASTRA-Aerospace-Simulator/releases/tag/v2.5.0-desktop)
 
 ![ASTRA Desktop: veicolo orbitale, Terra e nebulosa azzurra](docs/images/desktop-2.4.1-space.webp)
 
@@ -18,7 +18,7 @@ Musica: **“Horizons” di Scott Buckley**, pubblicata in [CC BY 4.0](https://c
 
 ## Installare e avviare
 
-1. Scarica `ASTRA-Desktop-2.4.1-Windows-x64-Setup.exe` dagli asset della release.
+1. Scarica `ASTRA-Desktop-2.5.0-Windows-x64-Setup.exe` dagli asset della release.
 2. Chiudi eventuali istanze precedenti di ASTRA e avvia l’installer.
 3. Apri **ASTRA Desktop** dal menu Start. Il simulatore include motore, modelli, texture e audio: non richiede Internet, browser o Python installato.
 4. Usa il profilo principale su GPU Vulkan; se necessario scegli **Grafica leggera** per il backend OpenGL. Aggiorna il driver della GPU se il renderer non si avvia.
@@ -40,7 +40,7 @@ Nel menu **OPERAZIONI DI VOLO** seleziona **SIMULATORE** per le procedure tecnic
 | Gioca · Aereo | Circuito completo, rotta in quota e rientro stretto. |
 | Gioca · Drone | Ispezione della rete, diagnosi strutturale e campionamento atmosferico. |
 
-Scegli una delle sole tre discipline per aprire la bacheca, leggi il briefing di controllo missione, gli obiettivi e le ricompense. Le 12 operazioni sono divise in tre campagne tecniche per categoria: ingegneria, esplorazione, pilotaggio e scienza; ogni campagna verifica i dati reali del volo. La progressione sblocca le missioni in sequenza; crediti, reputazione, scienza, tecnologie e strutture vengono salvati localmente. Quota, distanza, mantenimento della quota, rendezvous e touchdown sono misurati dal motore, non da timer fittizi. In Gioca la tastiera è attiva all'avvio; i controller si armano dal pannello **CONTROLLER**. Carburante, batteria, stallo e urti restano attivi.
+Scegli una delle sole tre discipline per aprire la bacheca, leggi il briefing di controllo missione, gli obiettivi e le ricompense. La bacheca aggiunge 384 contratti deterministici per disciplina, con 5 difficoltà, ricerca, filtri, preferiti, recenti e contratti giornalieri/settimanali offline. Le 12 operazioni storia sono divise in tre campagne tecniche per categoria: ingegneria, esplorazione, pilotaggio e scienza; ogni campagna verifica i dati reali del volo. La progressione sblocca le missioni in sequenza; crediti, reputazione, scienza, tecnologie e strutture vengono salvati localmente. Quota, distanza, mantenimento della quota, rendezvous e touchdown sono misurati dal motore, non da timer fittizi. In Gioca la tastiera è attiva all'avvio; i controller si armano dal pannello **CONTROLLER**. Carburante, batteria, stallo e urti restano attivi.
 
 ![Aereo realistico nella scena di volo ASTRA Desktop](docs/images/desktop-2.4.1-aircraft.webp)
 
@@ -61,6 +61,8 @@ Seleziona **CONTROLLO DA TASTIERA** per pilotare. Per Xbox/gamepad apri **CONTRO
 | Aumenta / riduci spinta | Shift / Ctrl | RT / LT |
 | Freni | B | LB |
 | Riprendi il GNC nella missione | G | X |
+| SAS orbitale ON/OFF | T | RB, configurabile |
+| Preset SAS precedente / successivo | Z / X | Pressione stick destro, configurabile |
 | Ruota la camera | Trascina con tasto destro | Mouse |
 | Zoom | Rotella | Mouse |
 | Mostra/nascondi interfaccia | F2 | Tastiera |
@@ -74,14 +76,14 @@ In **VOLO → DATI ESSENZIALI · DETTAGLI** espandi assetto e rotazione, posizio
 
 Il terreno segue il volo mediante chunk con memoria limitata e caricamento progressivo. L’ortofoto locale è raccordata al terreno procedurale: non è una cartografia mondiale scaricata in streaming. La Terra e la Luna restano sferiche durante lo zoom; la scena combina superfici planetarie, stelle e nebulosa azzurra. La modalità orbitale offre SAS inerziale, prograde/retrograde, radiale, normale, target e nodo di manovra; in manuale il GNC LVLH si rilascia e gli stick comandano le coppie d'assetto.
 
-Da **GRAFICA** seleziona Basso/Medio/Alto/Ultra e regola esposizione, audio ed effetti cinematografici. Il preset Medio usa FSR2 temporale a scala 0,67 nel renderer Forward+; il profilo Basso passa a OpenGL con costo ridotto. Scattering, ombre, glow, SSAO, SSR e SDFGI seguono il preset senza mettere un tetto agli FPS. Getti, bagliori, rotori e incandescenza di rientro rispondono ai dati del motore. I flipbook HDR di fumo e fiamma provengono da **Unity Labs Paris / Thomas ICHÉ**, pubblicati in [CC0](https://unity.com/blog/engine-platform/free-vfx-image-sequences-flipbooks) e inclusi offline con i crediti. Gli FPS sono illimitati con VSync disattivato; prestazioni e qualità dipendono dall'hardware e dalla scena. SSR è screen-space e non equivale a ray tracing hardware.
+Da **GRAFICA** seleziona Basso/Medio/Alto/Ultra/Ultra Cinema e regola esposizione, audio ed effetti cinematografici. Il preset Medio usa FSR2 temporale a scala 0,67 nel renderer Forward+; il profilo Basso passa a OpenGL con costo ridotto. Scattering, ombre, glow, SSAO, SSR e SDFGI seguono il preset senza mettere un tetto agli FPS. Getti, bagliori, rotori e incandescenza di rientro rispondono ai dati del motore. I flipbook HDR di fumo e fiamma provengono da **Unity Labs Paris / Thomas ICHÉ**, pubblicati in [CC0](https://unity.com/blog/engine-platform/free-vfx-image-sequences-flipbooks) e inclusi offline con i crediti. Gli FPS sono illimitati con VSync disattivato; prestazioni e qualità dipendono dall'hardware e dalla scena. SSR è screen-space e non equivale a ray tracing hardware.
 
 ## SDK Python: installazione corretta
 
 È richiesto **Python 3.10 o successivo** solo per usare gli script. Scarica il wheel della stessa release e installalo con l’interprete usato dal tuo editor:
 
 ```powershell
-python -m pip install --no-index --upgrade --force-reinstall --no-deps .\astra_simulator_client-2.4.1-py3-none-any.whl
+python -m pip install --no-index --upgrade --force-reinstall --no-deps .\astra_simulator_client-2.5.0-py3-none-any.whl
 ```
 
 Con ASTRA Desktop aperto:
@@ -110,6 +112,9 @@ L'API espone il controllo SAS e il catalogo della carriera; il motore resta il m
 ```python
 client.free_flight("space", "orbital", advanced_models=True)
 client.orbital_attitude("stability_assist")
+client.sas_enable()
+client.sas_mode("retrograde")
+print(client.status()["sas"])
 print(client.game_catalog("space"))
 ```
 
@@ -145,3 +150,22 @@ I modelli grafici NASA, Innerscene e PX4 sono riferimenti visivi: le prestazioni
 Modelli, autori, licenze e modifiche sono elencati in [ASSET-CREDITS.md](ASSET-CREDITS.md) e nel pannello **ASSET 3D → CREDITI E LICENZE** dell’app. Le preview sono catture reali del simulatore. I suoni sintetici sono originali del progetto. [Licenza del progetto](LICENSE).
 
 Le release desktop distribuiscono **installer Windows e SDK Python**. Questa guida sostituisce le precedenti istruzioni della Browser Edition; i vecchi link PWA, diagnostica browser e wheel 1.3 non sono il percorso d’installazione del desktop.
+
+
+## Aggiornamento 2.5.0
+
+SAS compatto: T attiva/disattiva, Z/X cambia preset; joystick RB e pressione
+stick destro, configurabili. Anello e marker originali, intervento manuale
+temporaneo con coppia e momento delle ruote limitati. [Guida SAS](docs/SAS.md).
+
+In **GIOCA**: 384 contratti per disciplina oltre alle 12 campagne storia,
+briefing IT/EN, obiettivi misurati, medaglie, retry e checkpoint della sessione.
+Il validatore conta 377/383/384 configurazioni distinte per Spazio/Aereo/Drone,
+escludendo ID e testo. [Template e limiti](docs/MISSIONI.md).
+
+![Bacheca dei contratti Gioca](docs/images/mission-board.png)
+![Risultato di una discesa realmente integrata](docs/images/mission-result.png)
+
+Materiali con microdettagli procedurali, luce di riflesso blu, ombre a quattro
+cascate e Ultra Cinema a scala 1,5. [Confronto grafico e prestazioni](docs/GRAPHICS-UPGRADE.md).
+Le immagini precedenti 2.4.1 restano archiviate con il proprio numero di versione.

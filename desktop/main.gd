@@ -3,6 +3,9 @@ extends Node
 const SceneClass = preload("res://native_scene.gd")
 const InputClass = preload("res://native_input.gd")
 const MenuWindow = preload("res://menu_window.gd")
+const SasHUD = preload("res://sas_hud.gd")
+const MissionBoard = preload("res://mission_board.gd")
+const MissionMap = preload("res://mission_map.gd")
 var api_url = "http://127.0.0.1:8765"
 var asset_path = ""
 var quality = "balanced"
@@ -34,11 +37,16 @@ var model_selection
 var visual_selection
 var mission_selection
 var sas_selection
+var sas_hud
+var sas_request_pending=false
 var mode_selection
 var game_mode=false
 var game_state={}
 var game_career={}
 var game_result_seen=""
+var game_language="it"
+var game_language_loaded=false
+var mission_messages={}
 var advanced
 var result_view
 var laboratory
@@ -167,12 +175,16 @@ func panel(parent,position,size):
     return p
 
 func make_interface():
+    mission_messages=JSON.parse_string(FileAccess.get_file_as_string("res://mission_i18n.json"))
     var layer = CanvasLayer.new()
     add_child(layer)
     ui = Control.new()
     ui.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     ui.mouse_filter=Control.MOUSE_FILTER_IGNORE
     layer.add_child(ui)
+    sas_hud=SasHUD.new();sas_hud.scale=Vector2(.74,.74);ui.add_child(sas_hud)
+    sas_hud.toggled.connect(toggle_sas)
+    sas_hud.mode_selected.connect(select_sas_mode)
     var theme = Theme.new()
     theme.default_font_size=14
     var normal = StyleBoxFlat.new()
@@ -231,10 +243,16 @@ func make_interface():
     widgets.game_status.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
     widgets.game_status.visible=false
     column.add_child(widgets.game_status)
+    widgets.game_map=MissionMap.new();column.add_child(widgets.game_map);widgets.game_map.visible=false
     widgets.game_board=button("APRI BACHECA MISSIONI",show_game_missions_current,column)
     widgets.game_board.visible=false
     widgets.game_manual=button("ATTIVA CONTROLLO TASTIERA",manual_keyboard,column)
     widgets.game_manual.visible=false
+    widgets.game_actions=VBoxContainer.new();column.add_child(widgets.game_actions)
+    widgets.game_checkpoint=button(mission_text("checkpoint"),func():game_action("checkpoint",{"action":"save"}),widgets.game_actions)
+    widgets.game_restore=button(mission_text("restore"),func():game_action("checkpoint",{"action":"restore"}),widgets.game_actions)
+    widgets.game_retry=button(mission_text("retry"),func():game_action("retry"),widgets.game_actions)
+    widgets.game_actions.visible=false
     widgets.sim_controls=[]
     var profile_label=label_text("PROFILO FISICO ASTRA",10);column.add_child(profile_label);widgets.sim_controls.append(profile_label)
     model_selection=OptionButton.new()
@@ -322,17 +340,12 @@ func make_interface():
         ["Prograde","prograde"],["Retrograde","retrograde"],
         ["Radiale entrante","radial_in"],["Radiale uscente","radial_out"],
         ["Normale orbitale","normal"],["Anti-normale orbitale","anti_normal"],
-        ["Punta al target","target"],["Nodo di manovra","maneuver_node"]]
+        ["Punta al target","target"],["Anti-target","anti_target"],["Nodo di manovra","maneuver_node"]]
     for entry in sas_modes:
         sas_selection.add_item(entry[0]);sas_selection.set_item_metadata(sas_selection.item_count-1,entry[1])
     manual.add_child(sas_selection)
     sas_selection.item_selected.connect(func(index):
-        var selected_mode=str(sas_selection.get_item_metadata(index))
-        if selected_mode=="maneuver_node" and state.get("command",{}).get("maneuver_direction_eci")==null:
-            widgets.note.text="Definisci prima maneuver_direction_eci con l'API Python."
-            return
-        var reply=await request("/command",{"mode":"manual","attitude_sas_mode":selected_mode})
-        report_result(reply);await poll())
+        select_sas_mode(str(sas_selection.get_item_metadata(index))))
     widgets.manual_axes={}
     for axis in [["throttle_pct","SPINTA",0,100,0],["roll_deg","ROLL",-60,60,0],["pitch_deg","PITCH",-45,90,0],["yaw_deg","YAW",-180,180,0],["brakes_pct","FRENI",0,100,0]]:
         manual.add_child(label_text(axis[1],10))
@@ -343,7 +356,7 @@ func make_interface():
         widgets.manual_axes[axis[0]]=slider
     widgets.input_status=label_text("COMANDI DISARMATI",11,Color(.6,.75,.9))
     manual.add_child(widgets.input_status)
-    manual.add_child(label_text("SPAZIO avvio/pausa · M manuale\nG automatico · WASD assetto\nQ/E imbardata · Shift/Ctrl spinta\nTasto destro: camera · Rotella: zoom",12))
+    manual.add_child(label_text("SPAZIO avvio/pausa · M manuale\nG automatico · WASD assetto\nT SAS · Z/X preset precedente/successivo\nQ/E imbardata · Shift/Ctrl spinta\nTasto destro: camera · Rotella: zoom",12))
     var bottom=panel(ui,Vector2(306,760),Vector2(756,120))
     widgets.bottom=bottom
     var details=VBoxContainer.new()
@@ -365,6 +378,7 @@ func resize_ui():
     widgets.right.size.y=size.y-194
     widgets.bottom.position.y=size.y-112
     widgets.bottom.size=Vector2(maxf(300,size.x-684),96)
+    sas_hud.position=Vector2(306,maxf(92,size.y-354))
 
 func fill_models():
     model_selection.clear()
@@ -403,6 +417,7 @@ func change_product_mode(index):
     widgets.game_status.visible=game_mode
     widgets.game_board.visible=game_mode
     widgets.game_manual.visible=game_mode and free_mode
+    if not game_mode:widgets.game_map.visible=false
     widgets.play.visible=not game_mode or free_mode
     if not game_mode:
         widgets.game_status.text=""
@@ -456,6 +471,9 @@ func poll():
     free_mode=desktop.get("play_mode","mission")=="free"
     game_state=snapshot.get("game",{})
     game_career=snapshot.get("career",{})
+    if not game_language_loaded:
+        game_language=str(game_career.get("preferences",{}).get("language","it"))
+        game_language_loaded=true
     var view_changed=int(snapshot.get("view",{}).get("revision",-1))!=view_revision
     if view_changed:
         view_revision=int(snapshot.view.revision);view_settings=snapshot.view.settings
@@ -476,6 +494,12 @@ func apply_view():
     if "quality" in view_changed_keys:
         scene.set_quality(str(view_settings.quality))
         quality="MEDIO" if view_settings.quality=="balanced" else str(view_settings.quality).to_upper()
+    if "enhanced_materials" in view_changed_keys:
+        scene.enhanced_materials=bool(view_settings.enhanced_materials)
+        if not scene.physical_state.is_empty():scene.build_vehicle()
+    if "earthshine" in view_changed_keys:
+        scene.earthshine=bool(view_settings.earthshine)
+        scene.earthshine_light.light_energy=.12 if scene.earthshine and scene.quality!="low" else 0.0
     if "cinematic_effects" in view_changed_keys:scene.cinematic_effects=bool(view_settings.cinematic_effects)
     if "audio_enabled" in view_changed_keys:scene.effects.audio_enabled=bool(view_settings.audio_enabled)
     if "audio_volume" in view_changed_keys:scene.effects.audio_volume=float(view_settings.audio_volume)
@@ -510,7 +534,7 @@ func capture_frame(job):
 func render_report():
     render_pending=true
     await request("/desktop/render",{"backend":RenderingServer.get_current_rendering_method(),"adapter":RenderingServer.get_video_adapter_name(),
-        "fps":Engine.get_frames_per_second(),"draw_calls":RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME),
+        "fps":Engine.get_frames_per_second(),"frame_time_ms":frame_times[-1] if not frame_times.is_empty() else 0,"draw_calls":RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME),
         "primitives":RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_PRIMITIVES_IN_FRAME),
         "objects":RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_OBJECTS_IN_FRAME),
         "asset_id":scene.active_asset_id,"asset_file":scene.selected_asset.get_file(),"asset_loaded":scene.last_model_import_ok,"asset_error":scene.asset_error,
@@ -543,13 +567,29 @@ func sync_mission_controls():
     for key in widgets.manual_axes:
         if state.get("command",{}).get(key)!=null:widgets.manual_axes[key].set_value_no_signal(float(state.command[key]))
     if sas_selection!=null:
-        var current_sas=str(state.get("command",{}).get("attitude_sas_mode","manual"))
+        sync_sas()
+
+func sync_sas():
+    if sas_selection!=null:
+        var sas=state.get("sas",{})
+        var current_sas=str(sas.get("mode","manual")) if sas.get("enabled",false) else "manual"
+        var expected=["manual"]+sas.get("available_modes",[])
+        var existing=[]
+        for i in range(sas_selection.item_count):existing.append(str(sas_selection.get_item_metadata(i)))
+        if existing!=expected:
+            sas_selection.clear()
+            for key in expected:
+                var caption="Manuale · inerziale"
+                for entry in SasHUD.MODES:
+                    if entry[0]==key:caption=entry[2]
+                sas_selection.add_item(caption);sas_selection.set_item_metadata(sas_selection.item_count-1,key)
         for i in range(sas_selection.item_count):
             if str(sas_selection.get_item_metadata(i))==current_sas:
                 sas_selection.select(i)
-                break
+        sas_hud.update_state(sas)
 
 func update_hud():
+    sync_sas()
     widgets.status.text="●  MOTORE COLLEGATO  /  API v1"
     widgets.phase.text=str(state.get("phase","READY")).replace("_"," ")
     if free_mode and vehicle=="space" and scenario=="mission" and not state.get("mission_started",false):widgets.phase.text="READY · ATTESA SPINTA"
@@ -569,24 +609,39 @@ func update_hud():
     widgets.play.text="PAUSA" if desktop.get("running",false) else "GIOCA / RIPRENDI" if free_mode else "RIPRENDI" if state.get("mission_started",false) else "AVVIA MISSIONE"
     widgets.automatic.text="PAUSA SICURA" if free_mode else "GNC AUTOMATICO"
     widgets.input_status.text="TASTIERA ATTIVA" if keyboard_active else "CONTROLLER ARMATO" if pilot.armed else "CONTROLLO PYTHON" if state.get("command",{}).get("mode")=="python" else "RIFERIMENTI MANUALI" if state.get("command",{}).get("mode")=="manual" else "GNC AUTOMATICO"
-    widgets.render.text="%s · %d FPS · %s"%[RenderingServer.get_current_rendering_method().to_upper(),Engine.get_frames_per_second(),quality.to_upper()]
+    widgets.render.text="%s · %d FPS · %.1f ms · %s"%[RenderingServer.get_current_rendering_method().to_upper(),Engine.get_frames_per_second(),frame_times[-1] if not frame_times.is_empty() else 0.0,quality.to_upper()]
     widgets.note.text=scene.asset_error if scene.asset_error!="" else "VISIVO: "+str(scene.active_asset.get("name",""))+" · F2 vista 3D"
     widgets.note.tooltip_text=str(scene.active_asset.get("source",""))+"\n"+str(scene.active_asset.get("license",""))+"\n"+str(scene.active_asset.get("source_url",""))
     widgets.play.visible=not game_mode or free_mode
     widgets.game_board.visible=game_mode
     widgets.game_manual.visible=game_mode and free_mode
-    sas_selection.visible=vehicle=="space" and scenario=="orbital"
+    widgets.game_actions.visible=game_mode and game_state.get("active",false)
+    widgets.game_map.set_flight(game_state.get("mission",{}) if game_state.get("active",false) else {},state,game_state)
+    widgets.game_map.visible=widgets.game_map.visible and game_mode
+    widgets.game_restore.disabled=not game_state.get("checkpoint_available",false)
+    widgets.game_checkpoint.text=mission_text("checkpoint")
+    widgets.game_restore.text=mission_text("restore")
+    widgets.game_retry.text=mission_text("retry")
+    sas_selection.visible=bool(state.get("sas",{}).get("supported",false))
     if game_mode:
         if game_state.get("active",false):
             var active_mission=game_state.mission
             var lines=[str(active_mission.campaign),str(active_mission.title),"T+ %s s  ·  tratta %s m"%[
                 format_number(game_state.get("elapsed_s",0)),format_number(game_state.get("distance_m",0))]]
-            for objective in active_mission.objectives:
-                var done=bool(game_state.get("progress",{}).get(objective.type,false))
-                lines.append(("✓  " if done else "○  ")+str(objective.label))
-            lines.append("WASD assetto · Q/E imbardata · Shift/Ctrl spinta · pad in CONTROLLER")
+            if not game_state.get("objective_progress",[]).is_empty():
+                for objective in game_state.objective_progress:
+                    lines.append(("✓  " if objective.get("complete",false) else "○  ")+str(objective.label)+"  %d%%"%roundi(float(objective.get("fraction",0))*100))
+            else:
+                for objective in active_mission.objectives:
+                    var done=bool(game_state.get("progress",{}).get(objective.type,false))
+                    lines.append(("✓  " if done else "○  ")+str(objective.label))
+            lines.append(mission_text("controls"))
+            var nav=game_state.get("navigation",{})
+            if not nav.is_empty():
+                lines.append("WP %s/%s · %s m · %s m/s"%[str(nav.get("index",0)),str(nav.get("total",0)),format_number(nav.get("distance_m",0)),format_number(nav.get("speed_m_s",0))])
+            if game_state.get("hint","")!="":lines.append(mission_text("hint")+": "+str(game_state.hint))
             widgets.game_status.text="\n".join(lines)
-            if game_state.get("complete",false) and game_result_seen!=str(active_mission.id):
+            if (game_state.get("complete",false) or game_state.get("failed",false)) and game_result_seen!=str(active_mission.id):
                 game_result_seen=str(active_mission.id)
                 show_game_result.call_deferred()
         else:
@@ -688,8 +743,9 @@ func manual_keyboard():
     var target=state.get("attitude_target_deg",[0,0,0])
     keyboard_target=Vector3(float(target[0]),float(target[1]),float(target[2]))
     if scenario=="orbital":
-        sas_selection.select(0)
-        request("/command",{"mode":"manual","attitude_sas_mode":"manual","attitude_torque_body_fraction":[0,0,0]})
+        var manual_command={"mode":"manual","attitude_torque_body_fraction":[0,0,0]}
+        if not state.get("sas",{}).get("enabled",false):manual_command.attitude_sas_mode="manual"
+        request("/command",manual_command)
     else:request("/command",{"mode":"manual"})
     widgets.note.text="MANUALE · WASD / Q E · Shift/Ctrl spinta · G riprende il GNC"
 
@@ -703,6 +759,41 @@ func manual_axis(key,value):
         command.attitude_torque_body_fraction=fractions
         command.attitude_sas_mode=str(sas_selection.get_item_metadata(sas_selection.selected))
     request("/command",command)
+
+func toggle_sas():
+    if not state.get("sas",{}).get("supported",false) or sas_request_pending:return
+    sas_request_pending=true
+    var reply=await request("/command",{"mode":"manual","sas_enabled":not state.sas.get("enabled",false)})
+    report_result(reply)
+    if not reply.has("error"):
+        state=reply
+        enable_sas_pilot_input()
+    sas_request_pending=false
+    await poll()
+
+func select_sas_mode(mode):
+    if sas_request_pending or not state.get("sas",{}).get("supported",false):return
+    if mode!="manual" and mode not in state.sas.get("available_modes",[]):return
+    sas_request_pending=true
+    var reply=await request("/command",{"mode":"manual","attitude_sas_mode":mode})
+    report_result(reply)
+    if not reply.has("error"):
+        state=reply
+        enable_sas_pilot_input()
+    sas_request_pending=false
+    await poll()
+
+func cycle_sas(direction=1):
+    var modes=state.get("sas",{}).get("available_modes",[])
+    if modes.is_empty():return
+    var current=modes.find(state.sas.get("mode","stability_assist"))
+    if current<0:current=0 if direction<0 else -1
+    select_sas_mode(modes[posmod(current+direction,modes.size())])
+
+func enable_sas_pilot_input():
+    if not pilot.armed and desktop.get("clock_owner","desktop")=="desktop":
+        keyboard_throttle=float(state.get("command",{}).get("throttle_pct",0))
+        keyboard_active=true
 
 func _process(dt):
     if validation_mode:return
@@ -725,7 +816,7 @@ func _process(dt):
         pilot_elapsed=0.0
         send_pilot()
     pilot.capture_calibration()
-    if smoke_path!="" and Time.get_ticks_msec()-start_wall>12000 and not state.is_empty():
+    if smoke_path!="" and Time.get_ticks_msec()-start_wall>12000 and renderer_frames>120 and not state.is_empty():
         var destination=smoke_path
         smoke_path=""
         smoke_capture(destination)
@@ -796,6 +887,12 @@ func _input(event):
         get_viewport().set_input_as_handled()
         return
     if event is not InputEventJoypadButton or event.device!=pilot.primary:return
+    if event.button_index==int(pilot.config.sas_toggle_button) or event.button_index==int(pilot.config.sas_next_button):
+        get_viewport().set_input_as_handled()
+        if event.pressed and pilot.armed:
+            if event.button_index==int(pilot.config.sas_toggle_button):toggle_sas()
+            else:cycle_sas()
+        return
     # D-pad navigates and A/B confirm/cancel via Godot's normal GUI actions.
     # Start is exclusively play/pause, so a focused GUI button cannot also
     # activate when the pilot resumes flight.
@@ -817,6 +914,9 @@ func _unhandled_key_input(event):
         KEY_SPACE:toggle_play()
         KEY_G:automatic()
         KEY_M:manual_keyboard()
+        KEY_T:toggle_sas()
+        KEY_Z:cycle_sas(-1)
+        KEY_X:cycle_sas(1)
         KEY_F11:DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED if DisplayServer.window_get_mode()==DisplayServer.WINDOW_MODE_FULLSCREEN else DisplayServer.WINDOW_MODE_FULLSCREEN)
         KEY_F2:request("/desktop/view",{"show_ui":not ui.visible})
 
@@ -1041,9 +1141,9 @@ func show_controller():
                 widgets.note.text="Dispositivo già assegnato: manetta e pedali richiedono periferiche distinte.")
         box.add_child(list)
     var fields={}
-    for setting in [["deadzone","Zona morta",0,.45],["expo","Esponenziale",0,1],["smoothing_s","Filtro · s",.001,.5],["sensitivity","Sensibilità stick",.25,2.5],["throttle_rate_pct_s","Velocità manetta · %/s",10,400],["orbital_slew_deg_s","Velocità riferimento orbitale · °/s",5,180],["roll_axis","Asse roll",0,15],["pitch_axis","Asse pitch",0,15],["yaw_axis","Asse yaw",0,15],["throttle_axis","Asse manetta",0,15]]:
+    for setting in [["deadzone","Zona morta",0,.45],["expo","Esponenziale",0,1],["smoothing_s","Filtro · s",.001,.5],["sensitivity","Sensibilità stick",.25,2.5],["throttle_rate_pct_s","Velocità manetta · %/s",10,400],["orbital_slew_deg_s","Velocità riferimento orbitale · °/s",5,180],["roll_axis","Asse roll",0,15],["pitch_axis","Asse pitch",0,15],["yaw_axis","Asse yaw",0,15],["throttle_axis","Asse manetta",0,15],["sas_toggle_button","Pulsante SAS (−1 disabilita; 10 RB)",-1,20],["sas_next_button","Pulsante prossimo preset (−1 disabilita; 8 R3)",-1,20]]:
         fields[setting[0]]=numeric(box,setting[1],pilot.config[setting[0]],setting[2],setting[3])
-        if str(setting[0]).ends_with("_axis"):fields[setting[0]].step=1
+        if str(setting[0]).ends_with("_axis") or str(setting[0]).ends_with("_button"):fields[setting[0]].step=1
     var curve=OptionButton.new();curve.add_item("Lineare");curve.set_item_metadata(0,"linear")
     curve.add_item("Esponenziale · fine al centro");curve.set_item_metadata(1,"exponential")
     curve.select(1 if pilot.config.curve=="exponential" else 0);box.add_child(curve)
@@ -1095,7 +1195,7 @@ func show_graphics():
     box.add_child(label_text("Backend: "+RenderingServer.get_current_rendering_method(),13))
     box.add_child(label_text("FPS UNLIMITED · VSync disattivato",13))
     var preset=OptionButton.new()
-    for entry in [["Basso · GPU integrate","low"],["Medio · FSR2","balanced"],["Alto · TAA / SSR","high"],["Ultra · SDFGI","ultra"]]:
+    for entry in [["Basso · GPU integrate","low"],["Medio · FSR2","balanced"],["Alto · TAA / SSR","high"],["Ultra · SDFGI","ultra"],["Ultra Cinema · screenshot","cinema"]]:
         preset.add_item(entry[0]);preset.set_item_metadata(preset.item_count-1,entry[1])
     var current_quality=str(view_settings.get("quality","balanced"))
     for i in range(preset.item_count):
@@ -1103,8 +1203,11 @@ func show_graphics():
     box.add_child(preset)
     preset.item_selected.connect(func(index):
         var selected=str(preset.get_item_metadata(index))
-        await request("/desktop/view",{"quality":selected,"resolution_scale":{"low":.65,"balanced":.67,"high":1.0,"ultra":1.15}[selected]})
+        await request("/desktop/view",{"quality":selected,"resolution_scale":{"low":.65,"balanced":.67,"high":1.0,"ultra":1.15,"cinema":1.5}[selected]})
         await poll())
+    for feature in [["enhanced_materials","Microdettagli materiali"],["earthshine","Luce riflessa Terra"]]:
+        var control=CheckBox.new();control.text=feature[1];control.button_pressed=bool(view_settings.get(feature[0],true));box.add_child(control)
+        control.toggled.connect(func(value):request("/desktop/view",{feature[0]:value}))
     var cinematic=CheckBox.new();cinematic.text="Effetti e camera cinematografica";cinematic.button_pressed=scene.cinematic_effects;box.add_child(cinematic)
     cinematic.toggled.connect(func(value):request("/desktop/view",{"cinematic_effects":value}))
     var sound=CheckBox.new();sound.text="Suoni di bordo · propulsione / motori";sound.button_pressed=scene.effects.audio_enabled;box.add_child(sound)
@@ -1191,42 +1294,30 @@ func show_game_missions_current():
     show_game_missions(str(mission_selection.get_item_metadata(index)) if index>=0 else "space")
 
 func show_game_missions(kind):
-    var catalogue=await request("/desktop/game/catalog",{"vehicle":kind})
-    if catalogue.has("error"):
-        widgets.note.text=str(catalogue.error)
-        return
-    var missions=catalogue.get(kind,[])
-    var completed=game_career.get("completed_missions",[])
-    var box=window_panel("GIOCA · Missioni / "+str(kind).to_upper(),Vector2i(900,760))
-    var win=box.get_parent().get_parent().get_parent()
-    box.add_child(label_text("OPERAZIONI DI CARRIERA · obiettivi verificati dal motore di volo ASTRA",13,Color(.55,.8,1)))
-    box.add_child(label_text("Crediti  %s     Reputazione  %s     Scienza  %s"%[
-        str(game_career.get("credits",25000)),str(game_career.get("reputation",0)),str(game_career.get("science",0))],16))
-    for i in range(missions.size()):
-        var mission=missions[i]
-        var locked=i>0 and not completed.has(missions[i-1].id)
-        var card=PanelContainer.new();box.add_child(card)
-        var contents=VBoxContainer.new();contents.add_theme_constant_override("separation",6);card.add_child(contents)
-        contents.add_child(label_text(str(mission.campaign)+"  ·  "+str(mission.category),10,Color(.4,.76,.95)))
-        contents.add_child(label_text(str(mission.title)+("  ·  COMPLETATA" if completed.has(mission.id) else ""),16,Color(.75,.91,1)))
-        var briefing=label_text(str(mission.briefing),12);briefing.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART;contents.add_child(briefing)
-        for objective in mission.objectives:
-            contents.add_child(label_text("◦  "+str(objective.label),12,Color(.64,.77,.88)))
-        var reward=mission.reward
-        contents.add_child(label_text("RICOMPENSA   ¤ %s   ·   REP %s   ·   SCI %s"%[
-            str(reward.credits),str(reward.reputation),str(reward.science)],11,Color(.5,.83,.78)))
-        var deploy=Button.new()
-        deploy.text="SBLOCCA LA MISSIONE PRECEDENTE" if locked else "RIPETI MISSIONE" if completed.has(mission.id) else "AVVIA OPERAZIONE"
-        deploy.disabled=locked
-        deploy.pressed.connect(func():start_game_mission(str(mission.id),win))
-        contents.add_child(deploy)
-    var close=Button.new();close.text="CHIUDI BACHECA";close.pressed.connect(win.queue_free);box.add_child(close)
+    var board=MissionBoard.new()
+    board.setup(self,kind,game_language)
 
-func start_game_mission(mission_id,win):
-    var reply=await request("/desktop/game/start",{"mission_id":mission_id})
+func mission_text(key):
+    return str(mission_messages.get(game_language,{}).get(key,key))
+
+func game_action(action,payload={},window=null):
+    if action!="checkpoint" or payload.get("action")!="save":
+        keyboard_active=false;pilot.disarm();latest_pilot_command={}
+    var reply=await request("/desktop/game/"+action,payload)
     if reply.has("error"):
-        widgets.note.text=str(reply.error)
+        report_result(reply)
         return
+    if action=="checkpoint" and payload.get("action")=="save":
+        widgets.note.text=mission_text("saved")
+        await poll()
+        return
+    game_result_seen=""
+    if is_instance_valid(window):window.queue_free()
+    apply_game_start(reply)
+    await request("/desktop/play",{})
+    await poll()
+
+func apply_game_start(reply):
     game_state=reply.get("game",{})
     game_career=reply.get("career",{})
     state=reply.get("state",{})
@@ -1235,9 +1326,26 @@ func start_game_mission(mission_id,win):
     free_mode=true;game_mode=true;game_result_seen=""
     mission_selection.select(0 if vehicle=="space" else 1 if vehicle=="aircraft" else 2)
     pilot.load_profile(vehicle);keyboard_active=true;replay_index=-1
+    keyboard_throttle=float(state.get("command",{}).get("throttle_pct",0))
     fill_models();scene.asset_choice="auto";scene.selected_asset="";scene.catalogue_asset={}
-    win.queue_free()
-    await request("/desktop/play",{})
+
+func start_game_mission(mission_id,win):
+    keyboard_active=false;pilot.disarm();latest_pilot_command={}
+    var reply=await request("/desktop/game/start",{"mission_id":mission_id,"language":game_language})
+    if reply.has("error"):
+        widgets.note.text=str(reply.error)
+        return
+    apply_game_start(reply)
+    if is_instance_valid(win):win.queue_free()
+    var tutorial=str(game_state.get("tutorial",""))
+    if tutorial!="":
+        var box=window_panel(mission_text("tutorial"),Vector2i(620,360))
+        var tutorial_window=box.get_parent().get_parent().get_parent()
+        box.add_child(label_text(mission_text("tutorial"),22,Color(.55,.85,1)))
+        var explanation=label_text(tutorial,16);explanation.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART;box.add_child(explanation)
+        box.add_child(label_text(mission_text("controls"),13))
+        button(mission_text("resume"),func():tutorial_window.queue_free();request("/desktop/play",{}),box)
+    else:await request("/desktop/play",{})
     await poll()
 
 func show_python(proof=null):
@@ -1311,13 +1419,33 @@ func show_career():
 func show_game_result():
     if not game_state.get("active",false):return
     var mission=game_state.mission
-    var reward=mission.reward
-    var box=window_panel("OPERAZIONE COMPLETATA · "+str(mission.title),Vector2i(620,420))
-    box.add_child(label_text("MISSIONE COMPLETATA",22,Color(.55,.9,.75)))
-    box.add_child(label_text("I dati di volo sono stati verificati dal motore ASTRA.",13))
-    box.add_child(label_text("RICOMPENSA  ¤ %s  ·  REP %s  ·  SCI %s"%[
-        str(reward.credits),str(reward.reputation),str(reward.science)],18,Color(.7,.9,1)))
-    button("CONTINUA LA CARRIERA",func():box.get_parent().get_parent().get_parent().queue_free();show_career(),box)
+    var succeeded=bool(game_state.get("complete",false))
+    var box=window_panel(mission_text("result"),Vector2i(780,640))
+    var win=box.get_parent().get_parent().get_parent()
+    box.add_child(label_text(mission_text("completed") if succeeded else mission_text("failed"),24,Color(.55,.95,.77) if succeeded else Color(1,.66,.44)))
+    box.add_child(label_text(str(mission.title),18))
+    var medal=str(game_state.get("medal",""))
+    if medal!="":box.add_child(label_text("◇  "+mission_text(medal),22,Color(1,.81,.41)))
+    if game_state.get("failure_reason","")!="":
+        var reason=label_text(mission_text(str(game_state.failure_reason)));reason.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART;box.add_child(reason)
+    box.add_child(label_text(mission_text("measured"),12,Color(.4,.75,1)))
+    var metrics=game_state.get("metrics",{"elapsed_s":game_state.get("elapsed_s",0),"distance_m":game_state.get("distance_m",0)})
+    var units={"elapsed_s":"s","distance_m":"m","resource_pct":"%","touchdown_speed_m_s":"m/s","max_altitude_m":"m","max_load_factor_g":"g","min_resource_pct":"%","relative_range_m":"m","relative_speed_m_s":"m/s"}
+    for key in metrics:
+        if metrics[key] is float or metrics[key] is int:
+            box.add_child(label_text(mission_text(key)+"  "+format_number(metrics[key])+" "+units.get(key,""),14))
+    for objective in game_state.get("objective_progress",[]):
+        box.add_child(label_text(("✓  " if objective.get("complete",false) else "○  ")+str(objective.label),13))
+    if succeeded:
+        var reward=game_state.get("earned_reward",mission.reward)
+        box.add_child(label_text(mission_text("reward")+"  ¤ %d  ·  REP %d  ·  SCI %d"%[int(reward.get("credits",0)),int(reward.get("reputation",0)),int(reward.get("science",0))],18,Color(.6,.9,.8)))
+        var next_button=button(mission_text("next_mission"),func():game_action("next",{},win),box)
+        next_button.disabled=str(game_state.get("next_mission_id",""))==""
+    button(mission_text("retry"),func():game_action("retry",{},win),box)
+    if game_state.get("checkpoint_available",false):
+        button(mission_text("restore"),func():game_action("checkpoint",{"action":"restore"},win),box)
+    if game_state.get("hint","")!="":box.add_child(label_text(mission_text("hint")+": "+str(game_state.hint),13))
+    button(mission_text("board_action"),func():win.queue_free();show_game_missions(vehicle),box)
 
 func smoke_capture(path):
     await RenderingServer.frame_post_draw

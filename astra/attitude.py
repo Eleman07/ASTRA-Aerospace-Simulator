@@ -143,6 +143,7 @@ class SpacecraftAttitude:
         self.control_mode = "lvlh"
         self.inertial_hold_quaternion = self.quaternion_body_to_eci[:]
         self.manual_torque_fraction = [0.0, 0.0, 0.0]
+        self.manual_override = False
 
     def _lvlh_target(self, position_eci_m: list[float], velocity_eci_m_s: list[float],
                      target_angles_deg: list[float]) -> tuple[list[float], list[float], list[float]]:
@@ -228,22 +229,25 @@ class SpacecraftAttitude:
         hmag = _norm(angular_momentum)
         normal = ([value/hmag for value in angular_momentum]
                   if hmag > 1e-9 else [0.0, 0.0, 1.0])
+        orbital_rate = [hmag/max(radius*radius, 1.0)*value for value in normal]
         if mode == "stability_assist":
             return self.inertial_hold_quaternion[:], [0.0, 0.0, 0.0]
         if mode == "prograde":
-            return self._direction_target(prograde, [-value for value in radial], "x"), [0.0, 0.0, 0.0]
+            return self._direction_target(prograde, [-value for value in radial], "x"), orbital_rate
         if mode == "retrograde":
-            return self._direction_target([-value for value in prograde], [-value for value in radial], "x"), [0.0, 0.0, 0.0]
+            return self._direction_target([-value for value in prograde], [-value for value in radial], "x"), orbital_rate
         if mode in {"radial_in", "radial_out"}:
             direction = [-value for value in radial] if mode == "radial_in" else radial
-            return self._direction_target(direction, prograde, "z"), [0.0, 0.0, 0.0]
+            return self._direction_target(direction, prograde, "x"), orbital_rate
         if mode in {"normal", "anti_normal"}:
             direction = normal if mode == "normal" else [-value for value in normal]
-            return self._direction_target(direction, [-value for value in radial], "y"), [0.0, 0.0, 0.0]
-        if mode == "target":
+            return self._direction_target(direction, [-value for value in radial], "x"), orbital_rate
+        if mode in {"target", "anti_target"}:
             if target_position_eci_m is None:
                 raise ValueError("Target SAS requires target orbit position")
             direction = [target_position_eci_m[i]-position_eci_m[i] for i in range(3)]
+            if mode == "anti_target":
+                direction = [-value for value in direction]
             return self._direction_target(direction, [-value for value in radial], "x"), [0.0, 0.0, 0.0]
         if mode == "maneuver_node":
             if maneuver_direction_eci is None:
@@ -308,7 +312,7 @@ class SpacecraftAttitude:
         angles = list(target_angles_deg or [0.0, 0.0, 0.0])
         if control_mode not in {"manual", "off", "stability_assist", "prograde",
                                 "retrograde", "radial_in", "radial_out", "normal",
-                                "anti_normal", "target", "maneuver_node", "lvlh"}:
+                                "anti_normal", "target", "anti_target", "maneuver_node", "lvlh"}:
             raise ValueError("Unknown spacecraft SAS mode")
         if control_mode == "stability_assist" and self.control_mode != "stability_assist":
             self.inertial_hold_quaternion = self.quaternion_body_to_eci[:]
@@ -317,17 +321,15 @@ class SpacecraftAttitude:
         torque_fraction = list(manual_torque_body_fraction or [0.0, 0.0, 0.0])
         if len(torque_fraction) != 3 or any(not math.isfinite(v) or abs(v) > 1.0 for v in torque_fraction):
             raise ValueError("manual attitude torque must contain three finite fractions in [-1, 1]")
-        if control_mode == "stability_assist" and any(abs(value) > 1e-6 for value in torque_fraction):
-            # Stick input commands a bounded body rate; the SAS then holds the
-            # newly slewed inertial attitude after the pilot centres the stick.
-            rate = [value*math.radians(30.0) for value in torque_fraction]
-            rate_norm = _norm(rate)
-            angle = rate_norm*dt_s
-            delta = ([1.0, 0.0, 0.0, 0.0] if rate_norm < 1e-12 else
-                     [math.cos(angle/2.0),
-                      *(value/rate_norm*math.sin(angle/2.0) for value in rate)])
-            self.inertial_hold_quaternion = _q_normalize(
-                _q_multiply(self.inertial_hold_quaternion, delta))
+        manual_override = (control_mode not in {"manual", "off", "lvlh"}
+                           and any(abs(value) > 1e-6 for value in torque_fraction))
+        if control_mode == "stability_assist" and (manual_override or self.manual_override):
+            # The stick temporarily owns the actual actuator, not an invisible
+            # moving target. On release capture the reached quaternion and damp
+            # residual rates with the available wheel torque; never snap pose.
+            self.inertial_hold_quaternion = self.quaternion_body_to_eci[:]
+        self.manual_override = manual_override
+        direct_torque = control_mode in {"manual", "off"} or manual_override
         target_q, target_omega_eci = self._sas_target(
             control_mode, position_eci_m, velocity_eci_m_s,
             target_position_eci_m, maneuver_direction_eci, angles)
@@ -345,14 +347,15 @@ class SpacecraftAttitude:
             q = _q_normalize(value[:4])
             omega = value[4:7]
             h = value[7:10]
-            if control_mode in {"manual", "off"}:
+            if direct_torque:
                 q_now = _q_normalize(value[:4])
                 omega_now = value[4:7]
                 radial_body_now = _q_rotate(_q_conjugate(q_now), radial_eci)
                 inertia_r_now = [self.inertia_kg_m2[i]*radial_body_now[i] for i in range(3)]
                 disturbance = [3.0*mu_m3_s2/radius**3*item
                                for item in _cross(radial_body_now, inertia_r_now)]
-                torque = [torque_fraction[i]*self.wheel_torque_limit_N_m[i]
+                torque = [torque_fraction[i]*self.wheel_torque_limit_N_m[i]*
+                          _clamp(getattr(self, "control_power_factor", 1.0), 0.0, 1.0)
                           for i in range(3)]
                 saturated_now = []
                 for i in range(3):
@@ -381,12 +384,13 @@ class SpacecraftAttitude:
             for value, limit in zip(propagated[7:10], self.wheel_momentum_limit_N_m_s)]
         final_state = [*self.quaternion_body_to_eci, *self.body_rates_rad_s,
                        *self.wheel_momentum_body_N_m_s]
-        if control_mode in {"manual", "off"}:
+        if direct_torque:
             radial_body = _q_rotate(_q_conjugate(self.quaternion_body_to_eci), radial_eci)
             inertia_r = [self.inertia_kg_m2[i]*radial_body[i] for i in range(3)]
             self.gravity_gradient_torque_body_N_m = [3.0*mu_m3_s2/radius**3*value
                 for value in _cross(radial_body, inertia_r)]
-            torque = [torque_fraction[i]*self.wheel_torque_limit_N_m[i]
+            torque = [torque_fraction[i]*self.wheel_torque_limit_N_m[i]*
+                      _clamp(getattr(self, "control_power_factor", 1.0), 0.0, 1.0)
                       for i in range(3)]
             self.wheel_saturated = []
             for i in range(3):
@@ -424,6 +428,8 @@ class SpacecraftAttitude:
                 "wheel_momentum_limit_N_m_s": self.wheel_momentum_limit_N_m_s[:],
                 "wheel_saturated": self.wheel_saturated[:],
                 "manual_torque_fraction": self.manual_torque_fraction[:],
+                "manual_override": self.manual_override,
+                "actuator": "reaction_wheels",
                 "inertia_kg_m2": self.inertia_kg_m2[:],
             },
         }

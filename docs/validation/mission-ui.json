@@ -1,0 +1,142 @@
+{
+  "adapter": "NVIDIA GeForce RTX 5080 Laptop GPU",
+  "board_population": true,
+  "difficulty_filter": true,
+  "headless": false,
+  "pagination": true,
+  "physical_time_s": 51.2364689996886,
+  "real_completed_mission": "proc1:space_lunar_precision:0",
+  "renderer": "forward_plus",
+  "request_count": 8,
+  "result": {
+    "active": true,
+    "checkpoint_available": true,
+    "checkpoint_scope": "CURRENT_PROCESS_ONLY",
+    "complete": true,
+    "distance_m": 92.0979042300985,
+    "earned_reward": {
+      "credits": 2952.0,
+      "reputation": 5.0,
+      "science": 4.0
+    },
+    "elapsed_s": 51.2364689996856,
+    "events": [],
+    "failed": false,
+    "failure_reason": "",
+    "hint": "",
+    "hold_s": 0.0,
+    "medal": "gold",
+    "metrics": {
+      "distance_m": 92.0979042300985,
+      "elapsed_s": 51.2364689996856,
+      "max_altitude_m": 1000.0,
+      "max_load_factor_g": 0.452047595347912,
+      "min_resource_pct": 89.3898763039124,
+      "resource_pct": 89.3898763039124,
+      "touchdown_speed_m_s": 0.704711834677904
+    },
+    "mission": {
+      "bonus": {
+        "max_elapsed_s": 80.0,
+        "touchdown_speed_m_s": 0.85
+      },
+      "briefing": "Frena la discesa da un diverso punto ENU e posa il lander sul piano locale. Terreno e dinamica restano quelli del simulatore. Settore locale di addestramento sintetico; non una cartografia geografica.",
+      "campaign": "CONTRATTI / Costa",
+      "category": "CONTRATTI",
+      "constraints": {
+        "deadline_s": 240.0,
+        "min_resource_pct": 35.0
+      },
+      "difficulty": 1.0,
+      "duration_s": 90.0,
+      "events": [],
+      "family": "lunar_landing",
+      "feasibility": {
+        "errors": [],
+        "resource_budget": {
+          "available_delta_v_m_s": 1309.607,
+          "required_delta_v_m_s": 266.921
+        },
+        "valid": true,
+        "verification": "CONSERVATIVE_ENVELOPE_NOT_A_FLIGHT_PROOF"
+      },
+      "id": "proc1:space_lunar_precision:0",
+      "language": "it",
+      "location": {
+        "frame": "ENU",
+        "name": "Costa",
+        "synthetic": true
+      },
+      "objectives": [
+        {
+          "id": "o1",
+          "label": "Atterra in sicurezza a velocit\u00e0 al suolo \u22641.3 m/s",
+          "speed_m_s": 1.3,
+          "type": "safe_landing"
+        }
+      ],
+      "optional_objectives": [
+        {
+          "id": "max_elapsed_s",
+          "label": "Completa entro 80 s",
+          "metric": "max_elapsed_s",
+          "target": 80.0
+        },
+        {
+          "id": "touchdown_speed_m_s",
+          "label": "Contatto a \u22640.85 m/s",
+          "metric": "touchdown_speed_m_s",
+          "target": 0.85
+        }
+      ],
+      "parameters": {
+        "initial_east_m": 70.0,
+        "initial_height_m": 1000.0,
+        "initial_north_m": 60.0,
+        "landing_speed": 1.3
+      },
+      "requirements": {
+        "completed_in_discipline": 0.0
+      },
+      "reward": {
+        "credits": 2460.0,
+        "reputation": 4.0,
+        "science": 3.0
+      },
+      "scenario": "planetary",
+      "seed": 0.0,
+      "setup": {
+        "initial_east_m": 70.0,
+        "initial_height_m": 1000.0,
+        "initial_north_m": 60.0
+      },
+      "source": "contracts",
+      "template_id": "space_lunar_precision",
+      "title": "Discesa lunare \u00b7 Costa #01",
+      "vehicle": "space",
+      "version": 1.0
+    },
+    "navigation": {},
+    "next_mission_id": "space_skyward",
+    "objective_progress": [
+      {
+        "complete": true,
+        "fraction": 1.0,
+        "id": "o1",
+        "label": "Atterra in sicurezza a velocit\u00e0 al suolo \u22641.3 m/s",
+        "target": 1.3,
+        "type": "safe_landing",
+        "value": 0.704711834677904
+      }
+    ],
+    "progress": {
+      "o1": true,
+      "safe_landing": true
+    },
+    "route_target": null,
+    "tutorial": "Inizia con comandi piccoli. T attiva il SAS dove disponibile. Segui gli obiettivi misurati; salva un checkpoint prima di un tratto difficile."
+  },
+  "sas_hud": true,
+  "search_filter": true,
+  "fixture_sha256": "c2d7f1c2eb73dd30df6a2ab120f8c6689bec43e802814c930cfe09d1c636ee81"
+}

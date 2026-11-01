@@ -3,9 +3,11 @@ from __future__ import annotations
 
 import math
 import unittest
+from unittest.mock import patch
 
-from astra.attitude import _q_rotate
-from astra.engine import SimulationEngine
+from astra.attitude import SpacecraftAttitude, _q_rotate
+from astra.engine import SimulationEngine, EARTH_RADIUS, MU_EARTH
+from astra_sdk import AstraClient
 from desktop_runtime import DesktopRuntime
 
 
@@ -78,6 +80,167 @@ class OrbitalSASTests(unittest.TestCase):
         runtime.dispatch("/command", {"attitude_torque_body_fraction": [1, 0, 0]}, "POST")
         rotated = runtime.engine.step(12.0)["attitude_quaternion_body_to_eci"]
         self.assertGreater(quaternion_distance_deg(initial, rotated), 2.0)
+
+    def test_enable_disable_and_gnc_authority_are_explicit(self):
+        self.engine.set_command({"sas_enabled": True})
+        sas = self.engine.state()["sas"]
+        self.assertTrue(sas["enabled"])
+        self.assertEqual(sas["mode"], "stability_assist")
+        self.assertEqual(self.engine.command["mode"], "manual")
+        self.engine.set_command({"attitude_sas_mode": "retrograde"})
+        self.engine.set_command({"sas_enabled": False})
+        sas = self.engine.step(.2)["sas"]
+        self.assertFalse(sas["enabled"])
+        self.assertEqual(sas["mode"], "retrograde")
+        self.assertEqual(sas["effective_mode"], "manual")
+        self.engine.set_command({"sas_enabled": True})
+        self.assertEqual(self.engine.command["attitude_sas_mode"], "stability_assist")
+        self.engine.set_command({"mode": "auto"})
+        sas = self.engine.state()["sas"]
+        self.assertFalse(sas["enabled"])
+        self.assertEqual(sas["authority"], "gnc")
+        self.assertEqual(sas["effective_mode"], "lvlh")
+        self.engine.set_command({"mode": "python", "attitude_target_deg": [5, 0, 0]})
+        self.assertEqual(self.engine.state()["sas"]["effective_mode"], "lvlh")
+
+    def test_contextual_modes_markers_and_node_removal(self):
+        sas = self.engine.state()["sas"]
+        self.assertIn("anti_target", sas["available_modes"])
+        self.assertNotIn("maneuver_node", sas["available_modes"])
+        for marker in sas["markers"].values():
+            self.assertAlmostEqual(sum(v*v for v in marker["direction_body"]), 1., places=12)
+        a, b = sas["markers"]["target"], sas["markers"]["anti_target"]
+        self.assertEqual(a["direction_eci"], [-v for v in b["direction_eci"]])
+        self.engine.set_command({"mode": "manual", "attitude_sas_mode": "anti_target"})
+        self.engine.step(.1)
+        self.engine.set_command({"attitude_sas_mode": "maneuver_node",
+                                 "maneuver_direction_eci": [1, 2, 3]})
+        self.assertIn("maneuver_node", self.engine.state()["sas"]["available_modes"])
+        self.engine.set_command({"maneuver_direction_eci": None})
+        self.assertEqual(self.engine.step(.1)["sas"]["mode"], "stability_assist")
+        self.engine.set_command({"attitude_sas_mode": "target"})
+        self.engine.target_orbit = self.engine.orbit[:]
+        self.assertNotIn("target", self.engine.state()["sas"]["available_modes"])
+        with self.assertRaises(ValueError):
+            self.engine.set_command({"attitude_sas_mode": "anti_target"})
+        self.assertEqual(self.engine.step(.1)["sas"]["mode"], "stability_assist")
+
+    def test_invalid_sas_is_atomic_and_other_vehicles_hide_it(self):
+        original = dict(self.engine.command)
+        for bad in ({"sas_enabled": 1}, {"sas_enabled": True, "mode": "auto"},
+                    {"attitude_sas_mode": "undefined"},
+                    {"attitude_sas_mode": "maneuver_node", "maneuver_direction_eci": [0, 0, 0]}):
+            with self.assertRaises(ValueError):
+                self.engine.set_command({"throttle_pct": 75, **bad})
+            self.assertEqual(self.engine.command, original)
+        for vehicle, scenario in (("aircraft", "mission"), ("drone", "mission"), ("space", "planetary")):
+            self.engine.reset(vehicle, scenario, advanced_models=True)
+            self.assertFalse(self.engine.state()["sas"]["supported"])
+            with self.assertRaises(ValueError):
+                self.engine.set_command({"sas_enabled": True})
+
+    def test_sdk_helpers_and_status_use_same_controller(self):
+        runtime = DesktopRuntime()
+        runtime.dispatch("/reset", {"vehicle": "space", "scenario": "orbital"}, "POST")
+        client = AstraClient("http://127.0.0.1:1")
+        def local_request(path, payload=None):
+            return runtime.dispatch(path.removeprefix("/api/v1"), payload, "GET" if payload is None else "POST")
+        with patch.object(client, "_request", side_effect=local_request):
+            self.assertTrue(client.sas_enable()["sas"]["enabled"])
+            self.assertEqual(client.sas_mode("retrograde")["sas"]["mode"], "retrograde")
+            self.assertTrue(client.status()["sas"]["enabled"])
+            self.assertFalse(client.sas_enable(False)["sas"]["enabled"])
+            self.assertEqual(client.orbital_attitude("prograde")["sas"]["mode"], "prograde")
+            client.reset("aircraft")
+            with self.assertRaises(ValueError):
+                client.sas_mode("stability_assist")
+
+
+class SASDynamicsTests(unittest.TestCase):
+    """Exercise the actual actuator/rigid-body plant along an analytic LEO.
+
+    A six-hundred-second circular reference avoids making a second numerical
+    orbit solver the oracle for guidance convergence. No pose is assigned after
+    the initial condition; all subsequent attitude changes are integrated.
+    """
+    radius = EARTH_RADIUS+420000.
+    mean_motion = math.sqrt(MU_EARTH/radius**3)
+
+    def initial(self):
+        a = SpacecraftAttitude()
+        a.initialize([self.radius, 0., 0.], [0., self.mean_motion*self.radius, 0.])
+        a.body_rates_rad_s = [0., 0., 0.]
+        return a
+
+    def advance(self, a, start, duration, mode, torque=None, mu=MU_EARTH):
+        errors = []
+        for index in range(round(duration/.1)):
+            angle = self.mean_motion*(start+(index+1)*.1)
+            p = [self.radius*math.cos(angle), self.radius*math.sin(angle), 0.]
+            v = [-self.radius*self.mean_motion*math.sin(angle), self.radius*self.mean_motion*math.cos(angle), 0.]
+            a.step(.1, p, v, mu, control_mode=mode, manual_torque_body_fraction=torque)
+            errors.append(a.attitude_error_deg)
+            for used, limit in zip(a.control_torque_body_Nm, a.wheel_torque_limit_N_m):
+                self.assertLessEqual(abs(used), limit+1e-12)
+            for used, limit in zip(a.wheel_momentum_body_N_m_s, a.wheel_momentum_limit_N_m_s):
+                self.assertLessEqual(abs(used), limit+1e-12)
+        return errors
+
+    def test_180_degree_prograde_and_retrograde_converge_without_tail_jitter(self):
+        for mode in ("prograde", "retrograde"):
+            with self.subTest(mode=mode):
+                a = self.initial()
+                if mode == "prograde":
+                    a.quaternion_body_to_eci = a._direction_target([0, -1, 0], [-1, 0, 0])
+                initial = a.quaternion_body_to_eci[:]
+                first = self.advance(a, 0., .1, mode)
+                self.assertLess(quaternion_distance_deg(initial, a.quaternion_body_to_eci), .001)
+                self.assertGreater(first[0], 179.)
+                errors = self.advance(a, .1, 599.9, mode)
+                self.assertLess(max(errors[-300:]), .01)
+                self.assertLess(max(errors[-300:])-min(errors[-300:]), .0001)
+
+    def test_stability_holds_without_disturbances_and_recaptures_on_release(self):
+        a = self.initial()
+        initial = a.quaternion_body_to_eci[:]
+        self.advance(a, 0., 120., "stability_assist", mu=0.)
+        self.assertLess(quaternion_distance_deg(initial, a.quaternion_body_to_eci), .00001)
+        self.advance(a, 120., 8., "stability_assist", [0, 0, .4])
+        self.assertTrue(a.manual_override)
+        released = a.quaternion_body_to_eci[:]
+        self.assertGreater(quaternion_distance_deg(initial, released), 1.)
+        errors = self.advance(a, 128., 300., "stability_assist")
+        self.assertFalse(a.manual_override)
+        self.assertLess(quaternion_distance_deg(released, a.quaternion_body_to_eci), .001)
+        self.assertLess(max(errors[-300:]), .001)
+        self.assertLess(max(abs(v) for v in a.body_rates_rad_s), 1e-6)
+
+    def test_every_directional_preset_yields_to_stick_then_resumes(self):
+        for mode in ("prograde", "retrograde", "normal", "anti_normal", "radial_in", "radial_out", "target", "anti_target", "maneuver_node"):
+            with self.subTest(mode=mode):
+                a = self.initial()
+                p, v = [self.radius, 0., 0.], [0., self.mean_motion*self.radius, 0.]
+                kwargs = dict(control_mode=mode, target_position_eci_m=[self.radius, 1000., 0.],
+                              maneuver_direction_eci=[1., 1., 0.])
+                a.step(.1, p, v, MU_EARTH, manual_torque_body_fraction=[.3, -.4, .5], **kwargs)
+                self.assertTrue(a.manual_override)
+                for torque, fraction, limit in zip(a.control_torque_body_Nm, [.3, -.4, .5], a.wheel_torque_limit_N_m):
+                    self.assertAlmostEqual(torque, fraction*limit, places=12)
+                a.step(.1, p, v, MU_EARTH, **kwargs)
+                self.assertFalse(a.manual_override)
+                self.assertEqual(a.control_mode, mode)
+
+    def test_power_loss_and_saturation_do_not_produce_free_torque(self):
+        a = self.initial()
+        a.control_power_factor = 0.
+        self.advance(a, 0., 1., "retrograde", [1, 1, 1], mu=0.)
+        self.assertEqual(a.control_torque_body_Nm, [0., 0., 0.])
+        self.assertEqual(a.body_rates_rad_s, [0., 0., 0.])
+        a.control_power_factor = 1.
+        a.wheel_momentum_body_N_m_s = [-v for v in a.wheel_momentum_limit_N_m_s]
+        self.advance(a, 1., 1., "manual", [1, 1, 1], mu=0.)
+        self.assertEqual(a.control_torque_body_Nm, [0., 0., 0.])
+        self.assertEqual(a.body_rates_rad_s, [0., 0., 0.])
 
 
 if __name__ == "__main__":

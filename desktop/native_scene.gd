@@ -68,6 +68,9 @@ var frame_time=0.0
 var reflection_time=0.0
 var cinematic_effects=true
 var last_state_time=-1.0
+var earthshine_light
+var enhanced_materials=true
+var earthshine=true
 
 func surface_texture(file):
     if texture_cache.has(file):return texture_cache[file]
@@ -85,7 +88,7 @@ func setup(assets,profile):
     advanced_renderer = RenderingServer.get_current_rendering_method()=="forward_plus"
     var viewport=get_viewport()
     viewport.scaling_3d_mode=Viewport.SCALING_3D_MODE_FSR2 if advanced_renderer and profile=="balanced" else Viewport.SCALING_3D_MODE_BILINEAR
-    viewport.scaling_3d_scale=.67 if advanced_renderer and profile=="balanced" else {"low":.65,"balanced":.82,"high":1.0,"ultra":1.15}.get(profile,.82)
+    viewport.scaling_3d_scale=.67 if advanced_renderer and profile=="balanced" else {"low":.65,"balanced":.82,"high":1.0,"ultra":1.15,"cinema":1.5}.get(profile,.82)
     add_child(world_root)
     world_root.add_child(ground_root)
     world_root.add_child(launch_root)
@@ -111,7 +114,15 @@ func setup(assets,profile):
     light.light_energy = 1.5
     light.shadow_enabled = profile!="low"
     light.directional_shadow_max_distance = 1800
+    light.directional_shadow_mode=DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS
+    light.directional_shadow_blend_splits=true
     add_child(light)
+    earthshine_light=DirectionalLight3D.new()
+    earthshine_light.light_color=Color(.32,.53,1.0)
+    earthshine_light.light_energy=.12 if profile!="low" else 0.0
+    earthshine_light.rotation_degrees=Vector3(75,0,0)
+    earthshine_light.shadow_enabled=false
+    add_child(earthshine_light)
     environment = Environment.new()
     environment.background_mode = Environment.BG_SKY
     environment.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
@@ -121,15 +132,15 @@ func setup(assets,profile):
     environment.tonemap_exposure = 1.0
     environment.glow_enabled = advanced_renderer
     environment.ssao_enabled = advanced_renderer and profile!="low"
-    environment.ssr_enabled = advanced_renderer and profile in ["high","ultra"]
-    environment.ssil_enabled = advanced_renderer and profile=="ultra"
+    environment.ssr_enabled = advanced_renderer and profile in ["high","ultra","cinema"]
+    environment.ssil_enabled = advanced_renderer and profile in ["ultra","cinema"]
     var sky = Sky.new()
     sky.process_mode=Sky.PROCESS_MODE_INCREMENTAL
     sky.radiance_size=Sky.RADIANCE_SIZE_128
     sky_material = ShaderMaterial.new()
     sky_material.shader = load("res://sky.gdshader")
-    sky_material.set_shader_parameter("nebula_steps",0 if profile=="low" else 6 if profile in ["high","ultra"] else 3)
-    sky_material.set_shader_parameter("atmosphere_steps",4 if profile=="low" else 16 if profile in ["high","ultra"] else 8)
+    sky_material.set_shader_parameter("nebula_steps",0 if profile=="low" else 6 if profile in ["high","ultra","cinema"] else 3)
+    sky_material.set_shader_parameter("atmosphere_steps",4 if profile=="low" else 16 if profile in ["high","ultra","cinema"] else 8)
     var suffix="1k" if profile=="low" else "2k"
     var emission=Image.load_from_file(asset_root.path_join("nebula-blue-emission-"+suffix+".exr"))
     var transmission=Image.load_from_file(asset_root.path_join("nebula-blue-transmission-"+suffix+".exr"))
@@ -142,7 +153,7 @@ func setup(assets,profile):
     sky.sky_material = sky_material
     environment.sky = sky
     sky_material.set_shader_parameter("sun_direction",light.global_basis.z.normalized())
-    get_viewport().use_taa=advanced_renderer and profile in ["high","ultra"]
+    get_viewport().use_taa=advanced_renderer and profile in ["high","ultra","cinema"]
     if get_viewport().use_taa or (advanced_renderer and profile=="balanced") or profile=="low":
         get_viewport().msaa_3d=Viewport.MSAA_DISABLED
     elif profile=="balanced":get_viewport().msaa_3d=Viewport.MSAA_2X
@@ -151,24 +162,25 @@ func setup(assets,profile):
     add_child(node)
 
 func set_quality(profile):
-    if profile not in ["low","balanced","high","ultra"]:return false
+    if profile not in ["low","balanced","high","ultra","cinema","cinema"]:return false
     if profile==quality:return true
     quality=profile
     var use_fsr2=advanced_renderer and profile=="balanced"
     get_viewport().scaling_3d_mode=Viewport.SCALING_3D_MODE_FSR2 if use_fsr2 else Viewport.SCALING_3D_MODE_BILINEAR
-    var scale=.67 if use_fsr2 else {"low":.65,"balanced":.82,"high":1.0,"ultra":1.15}[profile]
+    var scale=.67 if use_fsr2 else {"low":.65,"balanced":.82,"high":1.0,"ultra":1.15,"cinema":1.5}[profile]
     get_viewport().scaling_3d_scale=scale
-    get_viewport().use_taa=advanced_renderer and profile in ["high","ultra"]
+    get_viewport().use_taa=advanced_renderer and profile in ["high","ultra","cinema"]
     get_viewport().msaa_3d=Viewport.MSAA_DISABLED if get_viewport().use_taa or profile=="low" or use_fsr2 else Viewport.MSAA_2X if profile=="balanced" else Viewport.MSAA_4X
     environment.glow_enabled=advanced_renderer and profile!="low"
     environment.ssao_enabled=advanced_renderer and profile!="low"
-    environment.ssr_enabled=advanced_renderer and profile in ["high","ultra"]
-    environment.ssil_enabled=advanced_renderer and profile=="ultra"
-    environment.sdfgi_enabled=advanced_renderer and profile=="ultra" and domain in ["air","moon"]
+    environment.ssr_enabled=advanced_renderer and profile in ["high","ultra","cinema"]
+    environment.ssil_enabled=advanced_renderer and profile in ["ultra","cinema"]
+    environment.sdfgi_enabled=advanced_renderer and profile in ["ultra","cinema"] and domain in ["air","moon"]
+    earthshine_light.light_energy=.12 if earthshine and profile!="low" else 0.0
     light.shadow_enabled=profile!="low"
     light.directional_shadow_max_distance=600.0 if profile=="low" else 1200.0 if profile=="balanced" else 2200.0
-    sky_material.set_shader_parameter("nebula_steps",0 if profile=="low" else 6 if profile in ["high","ultra"] else 3)
-    sky_material.set_shader_parameter("atmosphere_steps",4 if profile=="low" else 16 if profile in ["high","ultra"] else 8)
+    sky_material.set_shader_parameter("nebula_steps",0 if profile=="low" else 6 if profile in ["high","ultra","cinema"] else 3)
+    sky_material.set_shader_parameter("atmosphere_steps",4 if profile=="low" else 16 if profile in ["high","ultra","cinema"] else 8)
     if map_visible:return true
     build_environment()
     if asset_choice!="custom":selected_asset=assets.choose_file(active_asset,physical_state,profile)
@@ -303,8 +315,8 @@ func build_environment():
     if is_instance_valid(planet):planet.queue_free()
     planet = null
     sky_material.set_shader_parameter("planet_visible",true)
-    var earth_file="earth-natural-8k.webp" if quality in ["high","ultra"] else "earth-natural-5.4k.webp" if quality=="balanced" else "earth-natural-2k.webp"
-    var file="celestial/moon-4k.webp" if domain=="moon" and quality in ["high","ultra"] else "celestial/moon-2k.webp" if domain=="moon" else earth_file
+    var earth_file="earth-natural-8k.webp" if quality in ["high","ultra","cinema"] else "earth-natural-5.4k.webp" if quality=="balanced" else "earth-natural-2k.webp"
+    var file="celestial/moon-4k.webp" if domain=="moon" and quality in ["high","ultra","cinema"] else "celestial/moon-2k.webp" if domain=="moon" else earth_file
     var texture=surface_texture(file)
     if texture!=null:sky_material.set_shader_parameter("planet_texture",texture)
     sky_material.set_shader_parameter("lunar_planet",domain=="moon")
@@ -330,7 +342,7 @@ func make_terrain(moon):
     material.set_shader_parameter("lunar",moon);material.set_shader_parameter("streamed",true)
     material.set_shader_parameter("patch_radius",23000.0)
     if not moon:
-        var texture=surface_texture("earth-cape-near-4k.webp" if quality in ["high","ultra"] else "earth-cape-near-2k.webp")
+        var texture=surface_texture("earth-cape-near-4k.webp" if quality in ["high","ultra","cinema"] else "earth-cape-near-2k.webp")
         if texture!=null:material.set_shader_parameter("ground_image",texture);material.set_shader_parameter("use_image",true)
     terrain_material=material
     terrain_stream=TerrainClass.new();ground_root.add_child(terrain_stream);terrain_stream.setup(material,moon)
@@ -396,6 +408,7 @@ func build_vehicle():
         return
     asset_error="";last_model_import_ok=true
     model_root.add_child(instance)
+    if enhanced_materials and quality!="low":assets.add_surface_detail(instance)
     effects.build(model_root,assets.get_bounds(instance),kind,domain=="orbit")
     for node in instance.find_children("*","Node3D",true,false):
         if node.name.begins_with("Rotor_") or node.name.begins_with("Propeller_"):
@@ -535,7 +548,7 @@ func inspect_body(catalogue,body_id):
         if body.id!=body_id:continue
         var sphere=SphereMesh.new();sphere.radius=100;sphere.height=200;sphere.radial_segments=128 if quality!="low" else 64;sphere.rings=64 if quality!="low" else 32
         var material=mat(Color.WHITE,0,.94).duplicate()
-        var file="earth-natural-8k.webp" if body_id=="earth" and quality in ["high","ultra"] else "earth-natural-5.4k.webp" if body_id=="earth" and quality=="balanced" else "earth-natural-2k.webp" if body_id=="earth" else "celestial/moon-4k.webp" if body_id=="moon" and quality in ["high","ultra"] else "celestial/moon-2k.webp" if body_id=="moon" else "celestial/venus_atmosphere-2k.webp" if body_id=="venus" else "celestial/"+body_id+"-2k.webp"
+        var file="earth-natural-8k.webp" if body_id=="earth" and quality in ["high","ultra","cinema"] else "earth-natural-5.4k.webp" if body_id=="earth" and quality=="balanced" else "earth-natural-2k.webp" if body_id=="earth" else "celestial/moon-4k.webp" if body_id=="moon" and quality in ["high","ultra","cinema"] else "celestial/moon-2k.webp" if body_id=="moon" else "celestial/venus_atmosphere-2k.webp" if body_id=="venus" else "celestial/"+body_id+"-2k.webp"
         var texture=surface_texture(file)
         if texture!=null:material.albedo_texture=texture
         else:material.albedo_color=Color(body.get("color","#a8b9ce"))

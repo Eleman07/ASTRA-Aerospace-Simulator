@@ -33,3 +33,23 @@ test_unsupported_live_coupling_is_honest (test_mission_context.MissionEngineerin
 Ran 30 tests in 0.602s
 
 OK
+
+2026-11-01 — TASK 2 SAS (source workspace)
+Inspection: README, ENGINEERING-*.md, credits, Godot UI/renderer, Python engine/runtime/SDK reviewed before edits.
+PASS: python -m unittest tools.test_orbital_sas -q — 13 tests.
+PASS: initial orbital/native visual/runtime regression — 24 tests including real loopback SDK HTTP (sandbox blocked loopback; authorized unsandboxed rerun passed).
+PASS: tools/test_input_routing.py — injected Godot events: T ignored in text field, T/RB/R3 SAS routing, D-pad/A/B/Start preserved, Python clock exclusive.
+PASS: Godot headless test_game_ui.gd and test_native_input.gd — contextual ring, default profile migration, invalid binding rejection.
+Measured direct attitude integration: 180-degree prograde and retrograde, 600 simulated seconds: final error 0.003227 degrees; last 30s variation ~4e-9 degrees. Torque and wheel momentum limits tested. No quaternion snapping.
+Limits: orbital actuator is reaction wheels, not an invented propellant-consuming RCS. SAS hidden in unsupported aircraft/UAV/lander contexts. No physical Xbox/HOTAS test. HUD visual capture pending later integrated verification.
+
+
+2026-11-01 — TASK 3 GIOCA + TASK 1 scoped graphics — Desktop 2.5.0
+PASS: tools/validate_missions.py --seeds100:1800 seed/template configurations; no invalid; physical distinct Spazio377/Aereo383/Drone384 (384 catalog entries each). IDs/text/unused parameters excluded from count.
+PASS:90 actual GNC flight witnesses (18families x5seeds covering difficulty1–5),12 command-only manual UAV flights. Source SHA256 and actual measured metrics in docs/validation/mission-*-witnesses.json. No proof claimed for every possible seed.
+PASS: native Godot board paging/search/difficulty and result+SAS captures. Recorded API responses; result from physical lunar descent51.236s. SAS size74%, T/Z/X + configurable RB/R3 verified. mission-map reads actual position.
+PASS: final Python suite126 executed124passed2skipped installer opt-in;27 JS tests passed; separate built installer integration1PASS (155files SHA256, user files preserved, uninstall).
+PASS: exported frozen host, installed offline SDK2.5.0, external clock, camera PNG capture and independent import test. Initial shader compilation exposed smoke-timeout race; fixed by requiring120 rendered frames. NSIS sandbox WinError623 resolved by authorized unsandboxed build.
+Graphics: original normal-map microdetails, clearcoat, four shadow cascades, earthshine toggle, Cinema1.5 and frame-time. Before/after5views and5preset reports in docs/validation/graphics-upgrade. Protected nebula/stars source and isolated sky PNG identical for4existing profiles. Float camera tolerance1e-6relative at planetary distances. RTX5080Laptop1440x900 renderer-only paused-state sample, concurrent CPU verification may affect measurements; no midrange-GPU or whole-game performance guarantee.
+NOT DELIVERED: full AAA visual overhaul, volumetric clouds/new city map/lunar DEM/new camera blur/grain/chromatic effects; existing planetary and VFX systems retained. Full limitations docs/GRAPHICS-UPGRADE.md. No new online assets.
+Save compatibility: legacy IDs/career retained; seeds+measured mission state only, physical checkpoints current-process memory only. No SAS atmospheric hold or propellant-driven orbital RCS invented. No physical gamepad hardware test.

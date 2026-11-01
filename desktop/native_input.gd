@@ -15,7 +15,7 @@ var pickup = false
 var previous_collective = 0.0
 const DEFAULT_CONFIG = {"deadzone":0.08,"expo":0.10,"curve":"linear","smoothing_s":0.012,"invert_pitch":false,
     "sensitivity":1.8,"throttle_rate_pct_s":140.0,"orbital_slew_deg_s":90.0,
-    "roll_axis":0,"pitch_axis":1,"yaw_axis":2,"throttle_axis":3,
+    "roll_axis":0,"pitch_axis":1,"yaw_axis":2,"throttle_axis":3,"sas_toggle_button":10,"sas_next_button":8,
     "centers":[0.0,0.0,0.0],"minimums":[-1.0,-1.0,-1.0],"maximums":[1.0,1.0,1.0],"profile":"Xbox / standard"}
 var config = DEFAULT_CONFIG.duplicate(true)
 var calibration_min = []
@@ -47,6 +47,14 @@ func apply_profile(data):
     if float(next.sensitivity)<.25 or float(next.sensitivity)>2.5:return false
     if float(next.throttle_rate_pct_s)<10 or float(next.throttle_rate_pct_s)>400:return false
     if float(next.orbital_slew_deg_s)<5 or float(next.orbital_slew_deg_s)>180:return false
+    for key in ["sas_toggle_button","sas_next_button"]:
+        if not (next[key] is float or next[key] is int):return false
+        if not is_finite(float(next[key])) or float(next[key])!=floorf(float(next[key])):return false
+        if int(next[key]) < -1 or int(next[key])>20:return false
+        # Preserve menu navigation, arming, pause, GNC, and brakes bindings.
+        if int(next[key]) in [0,1,2,3,6,9,11,12,13,14]:return false
+        next[key]=int(next[key])
+    if next.sas_toggle_button>=0 and next.sas_toggle_button==next.sas_next_button:return false
     for key in ["roll_axis","pitch_axis","yaw_axis","throttle_axis"]:
         if float(next[key])!=floorf(float(next[key])) or int(next[key])<0 or int(next[key])>15:return false
         next[key]=int(next[key])

@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "validation": "STRUCTURAL_AND_CONSERVATIVE_RESOURCE_ENVELOPE",
+  "passed": true,
+  "templates": 18,
+  "sampled_seeds_per_template": 100,
+  "first_seed": 0,
+  "missions_tested": 1800,
+  "tested_by_discipline": {
+    "space": 600,
+    "aircraft": 600,
+    "drone": 600
+  },
+  "catalog_variants_per_template": 64,
+  "catalog_entries": {
+    "space": 384,
+    "aircraft": 384,
+    "drone": 384
+  },
+  "physically_distinct_contracts": {
+    "space": 377,
+    "aircraft": 383,
+    "drone": 384
+  },
+  "duplicate_physical_configurations": {
+    "space": 7,
+    "aircraft": 1,
+    "drone": 0
+  },
+  "minimum_300_distinct_per_discipline": true,
+  "invalid_count": 0,
+  "invalid": [],
+  "distinctness_fields": [
+    "vehicle",
+    "scenario",
+    "setup",
+    "objectives without labels/IDs",
+    "events",
+    "constraints",
+    "bonus"
+  ],
+  "excluded_from_distinctness": [
+    "ID",
+    "seed",
+    "title",
+    "briefing",
+    "difficulty label",
+    "rewards",
+    "unused parameters"
+  ],
+  "limits": "Envelope and metric checks are not a proof that every seed can be flown. Real engine reference flights are reported separately in mission-flight-witnesses.json. No geographic scenery, cargo transfer, docking contact or new propulsion models are inferred."
+}

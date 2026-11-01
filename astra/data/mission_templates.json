@@ -1,0 +1,1640 @@
+{
+  "schema_version": 1,
+  "sectors": [
+    {
+      "it": "Costa",
+      "en": "Coast"
+    },
+    {
+      "it": "Altipiano",
+      "en": "Plateau"
+    },
+    {
+      "it": "Delta",
+      "en": "Delta"
+    },
+    {
+      "it": "Bacino",
+      "en": "Basin"
+    },
+    {
+      "it": "Arco Nord",
+      "en": "North Arc"
+    },
+    {
+      "it": "Arco Sud",
+      "en": "South Arc"
+    },
+    {
+      "it": "Aurora",
+      "en": "Aurora"
+    },
+    {
+      "it": "Zenit",
+      "en": "Zenith"
+    }
+  ],
+  "templates": [
+    {
+      "id": "space_sounding",
+      "vehicle": "space",
+      "scenario": "mission",
+      "family": "sounding",
+      "title": {
+        "it": "Sonda suborbitale",
+        "en": "Suborbital sounding"
+      },
+      "briefing": {
+        "it": "Supera la quota assegnata con il vettore recuperabile. Controlla la pressione dinamica durante la salita.",
+        "en": "Reach the assigned altitude with the recoverable launcher. Monitor dynamic pressure during ascent."
+      },
+      "parameters": {
+        "altitude_m": {
+          "min": 110000,
+          "max": 210000,
+          "step": 1000
+        }
+      },
+      "setup": {},
+      "objectives": [
+        {
+          "type": "altitude",
+          "value": "$altitude_m"
+        }
+      ],
+      "duration_s": 400,
+      "constraints": {
+        "deadline_s": 650
+      },
+      "bonus": {
+        "max_elapsed_s": 350,
+        "max_load_factor_g": 8
+      }
+    },
+    {
+      "id": "space_recovery",
+      "vehicle": "space",
+      "scenario": "mission",
+      "family": "recovery",
+      "title": {
+        "it": "Recupero della capsula",
+        "en": "Capsule recovery"
+      },
+      "briefing": {
+        "it": "Completa la salita e riporta la capsula a terra sotto paracadute; il contatto viene misurato dal motore.",
+        "en": "Complete ascent and recover the capsule under parachute; the engine measures ground contact."
+      },
+      "parameters": {
+        "altitude_m": {
+          "min": 100000,
+          "max": 190000,
+          "step": 1000
+        },
+        "landing_speed": {
+          "min": 8,
+          "max": 11,
+          "step": 0.1
+        }
+      },
+      "setup": {},
+      "objectives": [
+        {
+          "type": "altitude",
+          "value": "$altitude_m"
+        },
+        {
+          "type": "safe_landing",
+          "speed_m_s": "$landing_speed"
+        }
+      ],
+      "duration_s": 1500,
+      "constraints": {
+        "deadline_s": 2100
+      },
+      "bonus": {
+        "max_elapsed_s": 1600,
+        "touchdown_speed_m_s": 7
+      }
+    },
+    {
+      "id": "space_rendezvous",
+      "vehicle": "space",
+      "scenario": "orbital",
+      "family": "rendezvous",
+      "title": {
+        "it": "Appuntamento LEO",
+        "en": "LEO rendezvous"
+      },
+      "briefing": {
+        "it": "Raggiungi il bersaglio in orbita variando piano, punto di partenza e distanza. Annulla la velocità relativa.",
+        "en": "Approach the orbital target from a varied plane, phase and distance. Null relative velocity."
+      },
+      "parameters": {
+        "orbit_altitude_m": {
+          "min": 350000,
+          "max": 550000,
+          "step": 2000
+        },
+        "inclination_deg": {
+          "min": 0,
+          "max": 60,
+          "step": 2
+        },
+        "anomaly_deg": {
+          "min": -150,
+          "max": 150,
+          "step": 3
+        },
+        "separation_m": {
+          "min": 650,
+          "max": 1100,
+          "step": 10
+        }
+      },
+      "setup": {
+        "orbit_altitude_m": "$orbit_altitude_m",
+        "inclination_deg": "$inclination_deg",
+        "anomaly_deg": "$anomaly_deg",
+        "separation_m": "$separation_m"
+      },
+      "objectives": [
+        {
+          "type": "rendezvous",
+          "range_m": 35,
+          "speed_m_s": 0.35
+        }
+      ],
+      "duration_s": 1200,
+      "constraints": {
+        "deadline_s": 2200,
+        "min_resource_pct": 30
+      },
+      "bonus": {
+        "max_elapsed_s": 1200,
+        "min_resource_pct": 75
+      }
+    },
+    {
+      "id": "space_inspection",
+      "vehicle": "space",
+      "scenario": "orbital",
+      "family": "inspection",
+      "title": {
+        "it": "Ispezione a distanza",
+        "en": "Stand-off inspection"
+      },
+      "briefing": {
+        "it": "Raggiungi il punto di osservazione RTN assegnato senza contatto. Il corridoio resta una misura di posizione relativa.",
+        "en": "Reach the assigned RTN observation point without contact. The corridor is a relative-position measurement."
+      },
+      "parameters": {
+        "orbit_altitude_m": {
+          "min": 350000,
+          "max": 550000,
+          "step": 2000
+        },
+        "inclination_deg": {
+          "min": 0,
+          "max": 60,
+          "step": 2
+        },
+        "anomaly_deg": {
+          "min": -150,
+          "max": 150,
+          "step": 3
+        },
+        "separation_m": {
+          "min": 650,
+          "max": 1100,
+          "step": 10
+        },
+        "relative_target": {
+          "choices": [
+            [
+              0,
+              -40,
+              0
+            ],
+            [
+              12,
+              -50,
+              10
+            ],
+            [
+              -12,
+              -35,
+              -10
+            ],
+            [
+              0,
+              -60,
+              15
+            ]
+          ]
+        }
+      },
+      "setup": {
+        "orbit_altitude_m": "$orbit_altitude_m",
+        "inclination_deg": "$inclination_deg",
+        "anomaly_deg": "$anomaly_deg",
+        "separation_m": "$separation_m",
+        "relative_target_m": "$relative_target"
+      },
+      "objectives": [
+        {
+          "type": "relative_waypoint",
+          "position_m": "$relative_target",
+          "radius_m": 14,
+          "speed_m_s": 0.25
+        }
+      ],
+      "duration_s": 1200,
+      "constraints": {
+        "deadline_s": 2200,
+        "min_resource_pct": 30
+      },
+      "bonus": {
+        "max_elapsed_s": 1200,
+        "min_resource_pct": 75
+      }
+    },
+    {
+      "id": "space_lunar_precision",
+      "vehicle": "space",
+      "scenario": "planetary",
+      "family": "lunar_landing",
+      "title": {
+        "it": "Discesa lunare",
+        "en": "Lunar descent"
+      },
+      "briefing": {
+        "it": "Frena la discesa da un diverso punto ENU e posa il lander sul piano locale. Terreno e dinamica restano quelli del simulatore.",
+        "en": "Brake from a varied ENU starting point and land on the local plane. Terrain and dynamics remain those of the simulator."
+      },
+      "parameters": {
+        "initial_height_m": {
+          "min": 750,
+          "max": 1050,
+          "step": 10
+        },
+        "initial_east_m": {
+          "min": 50,
+          "max": 125,
+          "step": 5
+        },
+        "initial_north_m": {
+          "min": -75,
+          "max": 75,
+          "step": 5
+        },
+        "landing_speed": {
+          "min": 1.2,
+          "max": 2,
+          "step": 0.1
+        }
+      },
+      "setup": {
+        "initial_height_m": "$initial_height_m",
+        "initial_east_m": "$initial_east_m",
+        "initial_north_m": "$initial_north_m"
+      },
+      "objectives": [
+        {
+          "type": "safe_landing",
+          "speed_m_s": "$landing_speed"
+        }
+      ],
+      "duration_s": 90,
+      "constraints": {
+        "deadline_s": 240,
+        "min_resource_pct": 35
+      },
+      "bonus": {
+        "max_elapsed_s": 80,
+        "touchdown_speed_m_s": 0.85
+      }
+    },
+    {
+      "id": "space_lunar_survey",
+      "vehicle": "space",
+      "scenario": "planetary",
+      "family": "lunar_survey",
+      "title": {
+        "it": "Profilo di discesa scientifico",
+        "en": "Descent survey"
+      },
+      "briefing": {
+        "it": "Attraversa lentamente la fascia di misura prima del touchdown. La finestra richiede quota reale e tempo simulato continuo.",
+        "en": "Pass slowly through the measurement band before touchdown. The window requires real altitude and continuous simulated time."
+      },
+      "parameters": {
+        "initial_height_m": {
+          "min": 750,
+          "max": 1050,
+          "step": 10
+        },
+        "initial_east_m": {
+          "min": 50,
+          "max": 125,
+          "step": 5
+        },
+        "initial_north_m": {
+          "min": -75,
+          "max": 75,
+          "step": 5
+        },
+        "landing_speed": {
+          "min": 1.2,
+          "max": 2,
+          "step": 0.1
+        }
+      },
+      "setup": {
+        "initial_height_m": "$initial_height_m",
+        "initial_east_m": "$initial_east_m",
+        "initial_north_m": "$initial_north_m"
+      },
+      "objectives": [
+        {
+          "type": "hold_altitude",
+          "minimum_m": 120,
+          "maximum_m": 500,
+          "seconds": 4
+        },
+        {
+          "type": "safe_landing",
+          "speed_m_s": "$landing_speed"
+        }
+      ],
+      "duration_s": 90,
+      "constraints": {
+        "deadline_s": 240,
+        "min_resource_pct": 35
+      },
+      "bonus": {
+        "max_elapsed_s": 80,
+        "touchdown_speed_m_s": 0.85
+      }
+    },
+    {
+      "id": "air_circuit",
+      "vehicle": "aircraft",
+      "scenario": "mission",
+      "family": "circuit",
+      "title": {
+        "it": "Circuito locale",
+        "en": "Local circuit"
+      },
+      "briefing": {
+        "it": "Decolla, completa la tratta misurata e rientra sulla pista locale. Il Corvo è il profilo fisico di addestramento.",
+        "en": "Take off, fly the measured distance and return to the local runway. Corvo is the training physics profile."
+      },
+      "parameters": {
+        "wind": {
+          "choices": [
+            [
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              1,
+              0
+            ],
+            [
+              0,
+              -2,
+              0
+            ],
+            [
+              0,
+              3,
+              0
+            ]
+          ]
+        },
+        "altitude_m": {
+          "min": 350,
+          "max": 550,
+          "step": 10
+        },
+        "distance_m": {
+          "min": 5000,
+          "max": 16000,
+          "step": 250
+        },
+        "landing_speed": {
+          "min": 45,
+          "max": 49,
+          "step": 0.5
+        }
+      },
+      "setup": {
+        "model_id": "corvo-t2",
+        "wind_ned_m_s": "$wind"
+      },
+      "objectives": [
+        {
+          "type": "altitude",
+          "value": "$altitude_m"
+        },
+        {
+          "type": "distance",
+          "value": "$distance_m"
+        },
+        {
+          "type": "safe_landing",
+          "speed_m_s": "$landing_speed"
+        }
+      ],
+      "duration_s": 700,
+      "constraints": {
+        "deadline_s": 1500,
+        "min_resource_pct": 25
+      },
+      "bonus": {
+        "max_elapsed_s": 700,
+        "touchdown_speed_m_s": 43
+      }
+    },
+    {
+      "id": "air_route",
+      "vehicle": "aircraft",
+      "scenario": "mission",
+      "family": "altitude_route",
+      "title": {
+        "it": "Corridoio in quota",
+        "en": "Altitude corridor"
+      },
+      "briefing": {
+        "it": "Mantieni il corridoio di quota durante la rotta e rientra. Vento e carburante vengono integrati dal motore.",
+        "en": "Hold the altitude corridor along the route and return. Wind and fuel are integrated by the engine."
+      },
+      "parameters": {
+        "wind": {
+          "choices": [
+            [
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              1,
+              0
+            ],
+            [
+              0,
+              -2,
+              0
+            ],
+            [
+              0,
+              3,
+              0
+            ]
+          ]
+        },
+        "altitude_m": {
+          "min": 350,
+          "max": 550,
+          "step": 10
+        },
+        "distance_m": {
+          "min": 5000,
+          "max": 16000,
+          "step": 250
+        },
+        "landing_speed": {
+          "min": 45,
+          "max": 49,
+          "step": 0.5
+        },
+        "hold_s": {
+          "min": 8,
+          "max": 18,
+          "step": 1
+        }
+      },
+      "setup": {
+        "model_id": "corvo-t2",
+        "wind_ned_m_s": "$wind"
+      },
+      "objectives": [
+        {
+          "type": "hold_altitude",
+          "minimum_m": 350,
+          "maximum_m": 650,
+          "seconds": "$hold_s"
+        },
+        {
+          "type": "distance",
+          "value": "$distance_m"
+        },
+        {
+          "type": "safe_landing",
+          "speed_m_s": "$landing_speed"
+        }
+      ],
+      "duration_s": 700,
+      "constraints": {
+        "deadline_s": 1500,
+        "min_resource_pct": 25
+      },
+      "bonus": {
+        "max_elapsed_s": 700,
+        "min_resource_pct": 70
+      }
+    },
+    {
+      "id": "air_crosswind",
+      "vehicle": "aircraft",
+      "scenario": "mission",
+      "family": "crosswind",
+      "title": {
+        "it": "Rientro con vento laterale",
+        "en": "Crosswind recovery"
+      },
+      "briefing": {
+        "it": "Compensa il vento laterale assegnato e completa il circuito. La velocità di atterraggio è al suolo, non quella verticale.",
+        "en": "Compensate for the assigned crosswind and complete the circuit. Landing speed is ground speed, not vertical speed."
+      },
+      "parameters": {
+        "wind": {
+          "choices": [
+            [
+              0,
+              -3,
+              0
+            ],
+            [
+              0,
+              2.5,
+              0
+            ],
+            [
+              0,
+              3,
+              0
+            ]
+          ]
+        },
+        "altitude_m": {
+          "min": 350,
+          "max": 550,
+          "step": 10
+        },
+        "distance_m": {
+          "min": 5000,
+          "max": 16000,
+          "step": 250
+        },
+        "landing_speed": {
+          "min": 45,
+          "max": 49,
+          "step": 0.5
+        }
+      },
+      "setup": {
+        "model_id": "corvo-t2",
+        "wind_ned_m_s": "$wind"
+      },
+      "objectives": [
+        {
+          "type": "altitude",
+          "value": "$altitude_m"
+        },
+        {
+          "type": "safe_landing",
+          "speed_m_s": "$landing_speed"
+        }
+      ],
+      "duration_s": 700,
+      "constraints": {
+        "deadline_s": 1500,
+        "min_resource_pct": 25
+      },
+      "bonus": {
+        "max_elapsed_s": 700,
+        "touchdown_speed_m_s": 43
+      }
+    },
+    {
+      "id": "air_survey",
+      "vehicle": "aircraft",
+      "scenario": "mission",
+      "family": "survey",
+      "title": {
+        "it": "Ricognizione del corridoio",
+        "en": "Corridor survey"
+      },
+      "briefing": {
+        "it": "Acquisisci una misura continua in quota e percorri la tratta di ricognizione. Il rilievo rappresenta un passaggio verificato, senza sensori fotografici fittizi.",
+        "en": "Acquire a continuous altitude sample and fly the survey distance. Survey means a verified flight segment, without fabricated camera sensing."
+      },
+      "parameters": {
+        "wind": {
+          "choices": [
+            [
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              1,
+              0
+            ],
+            [
+              0,
+              -2,
+              0
+            ],
+            [
+              0,
+              3,
+              0
+            ]
+          ]
+        },
+        "altitude_m": {
+          "min": 350,
+          "max": 550,
+          "step": 10
+        },
+        "distance_m": {
+          "min": 5000,
+          "max": 16000,
+          "step": 250
+        },
+        "landing_speed": {
+          "min": 45,
+          "max": 49,
+          "step": 0.5
+        },
+        "hold_s": {
+          "min": 12,
+          "max": 24,
+          "step": 1
+        }
+      },
+      "setup": {
+        "model_id": "corvo-t2",
+        "wind_ned_m_s": "$wind"
+      },
+      "objectives": [
+        {
+          "type": "hold_altitude",
+          "minimum_m": 250,
+          "maximum_m": 650,
+          "seconds": "$hold_s"
+        },
+        {
+          "type": "distance",
+          "value": "$distance_m"
+        }
+      ],
+      "duration_s": 600,
+      "constraints": {
+        "deadline_s": 1200,
+        "min_resource_pct": 35
+      },
+      "bonus": {
+        "max_elapsed_s": 500,
+        "min_resource_pct": 72
+      }
+    },
+    {
+      "id": "air_economy",
+      "vehicle": "aircraft",
+      "scenario": "mission",
+      "family": "fuel_route",
+      "title": {
+        "it": "Rotta con riserva",
+        "en": "Fuel reserve route"
+      },
+      "briefing": {
+        "it": "Completa il circuito conservando la riserva minima. Una medaglia premia il margine residuo misurato.",
+        "en": "Complete the circuit while preserving the minimum reserve. A medal rewards measured remaining fuel."
+      },
+      "parameters": {
+        "wind": {
+          "choices": [
+            [
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              1,
+              0
+            ],
+            [
+              0,
+              -2,
+              0
+            ],
+            [
+              0,
+              3,
+              0
+            ]
+          ]
+        },
+        "altitude_m": {
+          "min": 350,
+          "max": 550,
+          "step": 10
+        },
+        "distance_m": {
+          "min": 5000,
+          "max": 16000,
+          "step": 250
+        },
+        "landing_speed": {
+          "min": 45,
+          "max": 49,
+          "step": 0.5
+        }
+      },
+      "setup": {
+        "model_id": "corvo-t2",
+        "wind_ned_m_s": "$wind"
+      },
+      "objectives": [
+        {
+          "type": "altitude",
+          "value": "$altitude_m"
+        },
+        {
+          "type": "distance",
+          "value": "$distance_m"
+        },
+        {
+          "type": "safe_landing",
+          "speed_m_s": "$landing_speed"
+        }
+      ],
+      "duration_s": 700,
+      "constraints": {
+        "deadline_s": 1500,
+        "min_resource_pct": 55
+      },
+      "bonus": {
+        "max_elapsed_s": 700,
+        "min_resource_pct": 74
+      }
+    },
+    {
+      "id": "air_recovery",
+      "vehicle": "aircraft",
+      "scenario": "mission",
+      "family": "engine_failure",
+      "title": {
+        "it": "Recupero a potenza ridotta",
+        "en": "Reduced-power recovery"
+      },
+      "briefing": {
+        "it": "Dopo la quota prevista il motore perde una parte della spinta. Rileva il guasto e atterra; la logica FDIR può anticipare il rientro.",
+        "en": "Above the assigned altitude the engine loses part of its thrust. Detect the fault and land; FDIR can start recovery early."
+      },
+      "parameters": {
+        "wind": {
+          "choices": [
+            [
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              1,
+              0
+            ],
+            [
+              0,
+              -2,
+              0
+            ],
+            [
+              0,
+              3,
+              0
+            ]
+          ]
+        },
+        "altitude_m": {
+          "min": 350,
+          "max": 550,
+          "step": 10
+        },
+        "distance_m": {
+          "min": 5000,
+          "max": 16000,
+          "step": 250
+        },
+        "landing_speed": {
+          "min": 45,
+          "max": 49,
+          "step": 0.5
+        },
+        "trigger_altitude": {
+          "min": 180,
+          "max": 250,
+          "step": 5
+        },
+        "loss": {
+          "min": 0.05,
+          "max": 0.1,
+          "step": 0.01
+        }
+      },
+      "setup": {
+        "model_id": "corvo-t2",
+        "wind_ned_m_s": "$wind"
+      },
+      "objectives": [
+        {
+          "type": "fault_detected"
+        },
+        {
+          "type": "safe_landing",
+          "speed_m_s": "$landing_speed"
+        }
+      ],
+      "duration_s": 400,
+      "events": [
+        {
+          "trigger": {
+            "field": "altitude_m",
+            "minimum": "$trigger_altitude"
+          },
+          "fault": {
+            "type": "engine_thrust_loss",
+            "severity_fraction": "$loss"
+          }
+        }
+      ],
+      "constraints": {
+        "deadline_s": 1200,
+        "min_resource_pct": 25
+      },
+      "bonus": {
+        "max_elapsed_s": 400,
+        "touchdown_speed_m_s": 43
+      }
+    },
+    {
+      "id": "drone_grid",
+      "vehicle": "drone",
+      "scenario": "mission",
+      "family": "inspection",
+      "title": {
+        "it": "Ispezione della rete",
+        "en": "Network inspection"
+      },
+      "briefing": {
+        "it": "Visita tutti i nodi della rete locale e riporta il drone al pad. Ogni waypoint richiede posizione e velocità reali.",
+        "en": "Visit every local network node and return to the pad. Each waypoint requires real position and speed."
+      },
+      "parameters": {
+        "heading_deg": {
+          "min": 0,
+          "max": 350,
+          "step": 10
+        },
+        "route_scale": {
+          "min": 0.8,
+          "max": 1.2,
+          "step": 0.05
+        },
+        "wind": {
+          "choices": [
+            [
+              0,
+              0,
+              0
+            ],
+            [
+              1,
+              0.5,
+              0
+            ],
+            [
+              -1,
+              1,
+              0
+            ],
+            [
+              2,
+              -1,
+              0
+            ]
+          ]
+        },
+        "hold_s": {
+          "min": 3,
+          "max": 8,
+          "step": 1
+        },
+        "landing_speed": {
+          "min": 1,
+          "max": 1.5,
+          "step": 0.1
+        }
+      },
+      "setup": {
+        "model_id": "falco-q8",
+        "wind_ned_m_s": "$wind"
+      },
+      "objectives": [
+        {
+          "type": "route"
+        },
+        {
+          "type": "safe_landing",
+          "speed_m_s": "$landing_speed"
+        }
+      ],
+      "duration_s": 230,
+      "layouts": [
+        [
+          [
+            0,
+            0
+          ],
+          [
+            18,
+            0
+          ],
+          [
+            18,
+            18
+          ],
+          [
+            0,
+            18
+          ]
+        ],
+        [
+          [
+            0,
+            0
+          ],
+          [
+            20,
+            10
+          ],
+          [
+            40,
+            0
+          ],
+          [
+            20,
+            -10
+          ]
+        ]
+      ],
+      "constraints": {
+        "deadline_s": 600,
+        "min_resource_pct": 35
+      },
+      "bonus": {
+        "max_elapsed_s": 230,
+        "min_resource_pct": 65
+      }
+    },
+    {
+      "id": "drone_tower",
+      "vehicle": "drone",
+      "scenario": "mission",
+      "family": "structural",
+      "title": {
+        "it": "Diagnosi strutturale",
+        "en": "Structural survey"
+      },
+      "briefing": {
+        "it": "Mantieni la fascia di quota e percorri i punti attorno alla struttura sintetica. La missione verifica il volo, non simula un sensore di danno.",
+        "en": "Hold the altitude band and visit points around the synthetic structure. This verifies flight, not a simulated damage sensor."
+      },
+      "parameters": {
+        "heading_deg": {
+          "min": 0,
+          "max": 350,
+          "step": 10
+        },
+        "route_scale": {
+          "min": 0.8,
+          "max": 1.2,
+          "step": 0.05
+        },
+        "wind": {
+          "choices": [
+            [
+              0,
+              0,
+              0
+            ],
+            [
+              1,
+              0.5,
+              0
+            ],
+            [
+              -1,
+              1,
+              0
+            ],
+            [
+              2,
+              -1,
+              0
+            ]
+          ]
+        },
+        "hold_s": {
+          "min": 3,
+          "max": 8,
+          "step": 1
+        },
+        "landing_speed": {
+          "min": 1,
+          "max": 1.5,
+          "step": 0.1
+        }
+      },
+      "setup": {
+        "model_id": "falco-q8",
+        "wind_ned_m_s": "$wind"
+      },
+      "objectives": [
+        {
+          "type": "hold_altitude",
+          "minimum_m": 24,
+          "maximum_m": 36,
+          "seconds": "$hold_s"
+        },
+        {
+          "type": "route"
+        },
+        {
+          "type": "safe_landing",
+          "speed_m_s": "$landing_speed"
+        }
+      ],
+      "duration_s": 230,
+      "layouts": [
+        [
+          [
+            0,
+            0
+          ],
+          [
+            12,
+            -12
+          ],
+          [
+            24,
+            0
+          ],
+          [
+            12,
+            12
+          ]
+        ],
+        [
+          [
+            0,
+            0
+          ],
+          [
+            -12,
+            12
+          ],
+          [
+            -24,
+            0
+          ],
+          [
+            -12,
+            -12
+          ]
+        ]
+      ],
+      "constraints": {
+        "deadline_s": 600,
+        "min_resource_pct": 35
+      },
+      "bonus": {
+        "max_elapsed_s": 230,
+        "min_resource_pct": 65
+      }
+    },
+    {
+      "id": "drone_mapping",
+      "vehicle": "drone",
+      "scenario": "mission",
+      "family": "mapping",
+      "title": {
+        "it": "Mappatura a passate",
+        "en": "Strip mapping"
+      },
+      "briefing": {
+        "it": "Vola tutte le passate della griglia e torna al pad. La copertura è verificata dai waypoint, senza generare ortofoto.",
+        "en": "Fly every strip of the grid and return. Coverage is verified by waypoints; no orthophoto is fabricated."
+      },
+      "parameters": {
+        "heading_deg": {
+          "min": 0,
+          "max": 350,
+          "step": 10
+        },
+        "route_scale": {
+          "min": 0.8,
+          "max": 1.2,
+          "step": 0.05
+        },
+        "wind": {
+          "choices": [
+            [
+              0,
+              0,
+              0
+            ],
+            [
+              1,
+              0.5,
+              0
+            ],
+            [
+              -1,
+              1,
+              0
+            ],
+            [
+              2,
+              -1,
+              0
+            ]
+          ]
+        },
+        "hold_s": {
+          "min": 3,
+          "max": 8,
+          "step": 1
+        },
+        "landing_speed": {
+          "min": 1,
+          "max": 1.5,
+          "step": 0.1
+        }
+      },
+      "setup": {
+        "model_id": "falco-q8",
+        "wind_ned_m_s": "$wind"
+      },
+      "objectives": [
+        {
+          "type": "route"
+        },
+        {
+          "type": "safe_landing",
+          "speed_m_s": "$landing_speed"
+        }
+      ],
+      "duration_s": 260,
+      "layouts": [
+        [
+          [
+            0,
+            0
+          ],
+          [
+            30,
+            0
+          ],
+          [
+            30,
+            12
+          ],
+          [
+            0,
+            12
+          ],
+          [
+            0,
+            24
+          ],
+          [
+            30,
+            24
+          ]
+        ],
+        [
+          [
+            0,
+            0
+          ],
+          [
+            25,
+            0
+          ],
+          [
+            25,
+            15
+          ],
+          [
+            0,
+            15
+          ],
+          [
+            0,
+            30
+          ],
+          [
+            25,
+            30
+          ]
+        ]
+      ],
+      "constraints": {
+        "deadline_s": 600,
+        "min_resource_pct": 35
+      },
+      "bonus": {
+        "max_elapsed_s": 230,
+        "min_resource_pct": 65
+      }
+    },
+    {
+      "id": "drone_sampling",
+      "vehicle": "drone",
+      "scenario": "mission",
+      "family": "sampling",
+      "title": {
+        "it": "Campionamento atmosferico",
+        "en": "Atmospheric sampling"
+      },
+      "briefing": {
+        "it": "Mantieni la fascia di misura in aria perturbata e completa il profilo di volo. Quota, tempo continuo e batteria sono letti dalla telemetria.",
+        "en": "Hold the sampling band in moving air and complete the flight profile. Altitude, continuous time and battery come from telemetry."
+      },
+      "parameters": {
+        "heading_deg": {
+          "min": 0,
+          "max": 350,
+          "step": 10
+        },
+        "route_scale": {
+          "min": 0.8,
+          "max": 1.2,
+          "step": 0.05
+        },
+        "wind": {
+          "choices": [
+            [
+              0,
+              0,
+              0
+            ],
+            [
+              1,
+              0.5,
+              0
+            ],
+            [
+              -1,
+              1,
+              0
+            ],
+            [
+              2,
+              -1,
+              0
+            ]
+          ]
+        },
+        "hold_s": {
+          "min": 3,
+          "max": 8,
+          "step": 1
+        },
+        "landing_speed": {
+          "min": 1,
+          "max": 1.5,
+          "step": 0.1
+        }
+      },
+      "setup": {
+        "model_id": "falco-q8",
+        "wind_ned_m_s": "$wind"
+      },
+      "objectives": [
+        {
+          "type": "hold_altitude",
+          "minimum_m": 24,
+          "maximum_m": 36,
+          "seconds": "$hold_s"
+        },
+        {
+          "type": "route"
+        },
+        {
+          "type": "safe_landing",
+          "speed_m_s": "$landing_speed"
+        }
+      ],
+      "duration_s": 230,
+      "layouts": [
+        [
+          [
+            0,
+            0
+          ],
+          [
+            35,
+            0
+          ],
+          [
+            35,
+            20
+          ]
+        ],
+        [
+          [
+            0,
+            0
+          ],
+          [
+            20,
+            30
+          ],
+          [
+            -10,
+            30
+          ]
+        ]
+      ],
+      "constraints": {
+        "deadline_s": 600,
+        "min_resource_pct": 35
+      },
+      "bonus": {
+        "max_elapsed_s": 230,
+        "min_resource_pct": 65
+      }
+    },
+    {
+      "id": "drone_search",
+      "vehicle": "drone",
+      "scenario": "mission",
+      "family": "search",
+      "title": {
+        "it": "Ricerca a settori",
+        "en": "Sector search"
+      },
+      "briefing": {
+        "it": "Percorri ogni ramo della ricerca prima di rientrare. I punti di ricerca sono posizioni locali note, non persone rilevate da un sensore fittizio.",
+        "en": "Visit each search branch before returning. Search points are known local positions, not people detected by a fabricated sensor."
+      },
+      "parameters": {
+        "heading_deg": {
+          "min": 0,
+          "max": 350,
+          "step": 10
+        },
+        "route_scale": {
+          "min": 0.8,
+          "max": 1.2,
+          "step": 0.05
+        },
+        "wind": {
+          "choices": [
+            [
+              0,
+              0,
+              0
+            ],
+            [
+              1,
+              0.5,
+              0
+            ],
+            [
+              -1,
+              1,
+              0
+            ],
+            [
+              2,
+              -1,
+              0
+            ]
+          ]
+        },
+        "hold_s": {
+          "min": 3,
+          "max": 8,
+          "step": 1
+        },
+        "landing_speed": {
+          "min": 1,
+          "max": 1.5,
+          "step": 0.1
+        }
+      },
+      "setup": {
+        "model_id": "falco-q8",
+        "wind_ned_m_s": "$wind"
+      },
+      "objectives": [
+        {
+          "type": "route"
+        },
+        {
+          "type": "safe_landing",
+          "speed_m_s": "$landing_speed"
+        }
+      ],
+      "duration_s": 260,
+      "layouts": [
+        [
+          [
+            0,
+            0
+          ],
+          [
+            30,
+            0
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            30
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            -30,
+            0
+          ]
+        ],
+        [
+          [
+            0,
+            0
+          ],
+          [
+            20,
+            20
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            -20,
+            20
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            -30
+          ]
+        ]
+      ],
+      "constraints": {
+        "deadline_s": 600,
+        "min_resource_pct": 35
+      },
+      "bonus": {
+        "max_elapsed_s": 230,
+        "min_resource_pct": 65
+      }
+    },
+    {
+      "id": "drone_delivery",
+      "vehicle": "drone",
+      "scenario": "mission",
+      "family": "delivery",
+      "title": {
+        "it": "Consegna di precisione",
+        "en": "Precision delivery"
+      },
+      "briefing": {
+        "it": "Raggiungi il punto di consegna e rientra al pad con contatto dolce. La consegna è una verifica di volo al waypoint, senza scambio di carico simulato.",
+        "en": "Reach the delivery point and return with a soft touchdown. Delivery verifies waypoint flight; it does not simulate cargo transfer."
+      },
+      "parameters": {
+        "heading_deg": {
+          "min": 0,
+          "max": 350,
+          "step": 10
+        },
+        "route_scale": {
+          "min": 0.8,
+          "max": 1.2,
+          "step": 0.05
+        },
+        "wind": {
+          "choices": [
+            [
+              0,
+              0,
+              0
+            ],
+            [
+              1,
+              0.5,
+              0
+            ],
+            [
+              -1,
+              1,
+              0
+            ],
+            [
+              2,
+              -1,
+              0
+            ]
+          ]
+        },
+        "hold_s": {
+          "min": 3,
+          "max": 8,
+          "step": 1
+        },
+        "landing_speed": {
+          "min": 1,
+          "max": 1.5,
+          "step": 0.1
+        }
+      },
+      "setup": {
+        "model_id": "falco-q8",
+        "wind_ned_m_s": "$wind"
+      },
+      "objectives": [
+        {
+          "type": "route"
+        },
+        {
+          "type": "safe_landing",
+          "speed_m_s": "$landing_speed"
+        }
+      ],
+      "duration_s": 200,
+      "layouts": [
+        [
+          [
+            0,
+            0
+          ],
+          [
+            35,
+            20
+          ]
+        ],
+        [
+          [
+            0,
+            0
+          ],
+          [
+            20,
+            -40
+          ]
+        ],
+        [
+          [
+            0,
+            0
+          ],
+          [
+            -35,
+            -15
+          ]
+        ]
+      ],
+      "constraints": {
+        "deadline_s": 600,
+        "min_resource_pct": 35
+      },
+      "bonus": {
+        "max_elapsed_s": 230,
+        "min_resource_pct": 65
+      }
+    }
+  ]
+}

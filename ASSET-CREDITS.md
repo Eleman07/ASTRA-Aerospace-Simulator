@@ -1,5 +1,10 @@
 # Crediti e licenze degli asset
 
+## Estensione SAS / GIOCA 2026-11
+
+- `desktop/sas_hud.gd`: simboli vettoriali originali ASTRA, generati dal codice
+  del progetto sotto licenza MIT. Nessuna icona o asset estratto da altri giochi.
+
 Il codice ASTRA è distribuito con licenza MIT; le texture hanno provenienza e
 crediti separati. Le texture NASA qui elencate sono materiale NASA riutilizzabile
 secondo le rispettive pagine sorgente. ASTRA non è affiliato né approvato dalla
@@ -237,3 +242,12 @@ nebulosa a ogni pixel e fotogramma. Non si tratta di dati astronomici misurati.
 - Fonte e dichiarazione di licenza: https://unity.com/blog/engine-platform/free-vfx-image-sequences-flipbooks . Licenza: https://creativecommons.org/publicdomain/zero/1.0/ .
 - EXR HDR estratti dagli archivi ufficiali, inclusi in `assets/vfx/`. È corretto soltanto il conteggio dei byte `chlist` nell’header originale (55 → 73 per quattro canali); pixel HDR e trasparenza sono invariati. Checksum degli archivi e dei file in `assets/vfx/sources.json`. Nessun requisito di utilizzo del motore Unity.
 - Integrazione ASTRA: campionamento animato a 24 fps, adattamento dei colori e dell'opacità alla pressione ambiente e alla spinta; fumo su particelle billboard con atlas 8×8. Gli atlas artistici non sostituiscono un modello CFD del getto.
+
+
+## Desktop 2.5 — dettagli originali
+
+`desktop/vehicle_assets.gd` genera una normal map tileable 256×256 con micropannelli,
+rivetti e finitura spazzolata. Asset originale procedurale ASTRA, licenza MIT;
+nessuna dipendenza online. Albedo, normal esistenti, AO, emissione e trasparenza
+degli asset originali sono conservati. Materiali STL senza UV usano triplanar.
+Mappa di rotta e simboli HUD sono originali ASTRA sotto MIT.

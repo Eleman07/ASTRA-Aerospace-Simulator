@@ -12,9 +12,13 @@ class VirtualPilot extends NativeInput:
 
 class FlightUI extends Main:
     var play_count=0
+    var sas_count=0
+    var sas_cycle_count=0
     func _ready():pass
     func _process(_dt):pass
     func toggle_play():play_count+=1
+    func toggle_sas():sas_count+=1
+    func cycle_sas(_direction=1):sas_cycle_count+=1
 
 func require(condition,message):
     if not condition:
@@ -88,6 +92,20 @@ func run():
     release=InputEventJoypadButton.new();release.device=0;release.button_index=JOY_BUTTON_START;release.pressed=false
     Input.parse_input_event(release);await process_frame
     if not require(flight.play_count==1 and button_calls[0]==1,"Start must toggle flight once without activating the GUI"):return
+    for binding in [pilot.config.sas_toggle_button,pilot.config.sas_next_button]:
+        var sas_press=InputEventJoypadButton.new();sas_press.device=0;sas_press.button_index=binding;sas_press.pressed=true
+        Input.parse_input_event(sas_press);await process_frame
+        sas_press=InputEventJoypadButton.new();sas_press.device=0;sas_press.button_index=binding;sas_press.pressed=false
+        Input.parse_input_event(sas_press);await process_frame
+    if not require(flight.sas_count==1 and flight.sas_cycle_count==1 and button_calls[0]==1,"SAS buttons must route once without activating menus"):return
+    spin.get_line_edit().grab_focus()
+    var key=InputEventKey.new();key.keycode=KEY_T;key.unicode=116;key.pressed=true
+    Input.parse_input_event(key);await process_frame
+    if not require(flight.sas_count==1,"typing T must not toggle SAS"):return
+    focused.grab_focus()
+    key=InputEventKey.new();key.keycode=KEY_T;key.pressed=true
+    Input.parse_input_event(key);await process_frame
+    if not require(flight.sas_count==2,"T must toggle SAS in flight"):return
     root.gui_embed_subwindows=true
     var menu=MenuWindow.new();root.add_child(menu)
     var menu_controls=VBoxContainer.new();menu.add_child(menu_controls)

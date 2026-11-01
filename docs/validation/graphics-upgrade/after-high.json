@@ -1,0 +1,163 @@
+{
+  "adapter": "NVIDIA GeForce RTX 5080 Laptop GPU",
+  "fps_cap": 0,
+  "measurement": "At least 150 raw wall-clock frames and two seconds per fixed view, after 90 frames plus two seconds warmup",
+  "protected_sky": "C:\\ASTRA-Aerospace-Simulator\\test-results\\graphics-upgrade\\after\\high/protected-sky.png",
+  "quality": "high",
+  "renderer": "forward_plus",
+  "resolution": [
+    1440,
+    900
+  ],
+  "views": [
+    {
+      "actual_camera_m": [
+        10.1277742385864,
+        4.01721858978271,
+        7.09154462814331
+      ],
+      "asset": "nasa-orion-spacecraft",
+      "camera": {
+        "azimuth_deg": 55.0,
+        "distance_m": 13.0,
+        "elevation_deg": 18.0,
+        "exposure": 0.8,
+        "focus_height_m": 0.0,
+        "fov_deg": 48.0
+      },
+      "capture": "C:\\ASTRA-Aerospace-Simulator\\test-results\\graphics-upgrade\\after\\high/orbit.png",
+      "draw_calls": 16,
+      "fps": 277.728242914309,
+      "id": "orbit",
+      "max_frame_ms": 14.827,
+      "mean_frame_ms": 3.60064208633093,
+      "p50_frame_ms": 3.475,
+      "p95_frame_ms": 4.345,
+      "primitives": 88488,
+      "samples": 556,
+      "simulation_time_s": 9.99999999999998,
+      "terrain_chunks": 0
+    },
+    {
+      "actual_camera_m": [
+        11928735.0,
+        3880132.0,
+        -8352591.5
+      ],
+      "asset": "nasa-orion-spacecraft",
+      "camera": {
+        "azimuth_deg": 125.0,
+        "distance_m": 18000000.0,
+        "elevation_deg": 36.0,
+        "exposure": 1.0,
+        "focus_height_m": -6700000.0,
+        "fov_deg": 48.0
+      },
+      "capture": "C:\\ASTRA-Aerospace-Simulator\\test-results\\graphics-upgrade\\after\\high/earth-terminator.png",
+      "draw_calls": 0,
+      "fps": 292.518806563203,
+      "id": "earth-terminator",
+      "max_frame_ms": 5.283,
+      "mean_frame_ms": 3.41858361774744,
+      "p50_frame_ms": 3.333,
+      "p95_frame_ms": 4.145,
+      "primitives": 0,
+      "samples": 586,
+      "simulation_time_s": 9.99999999999998,
+      "terrain_chunks": 0
+    },
+    {
+      "actual_camera_m": [
+        10.4162769317627,
+        4.40285539627075,
+        7.29354810714722
+      ],
+      "asset": "nasa-insight",
+      "camera": {
+        "azimuth_deg": 55.0,
+        "distance_m": 13.0,
+        "elevation_deg": 12.0,
+        "exposure": 1.0,
+        "focus_height_m": 1.7,
+        "fov_deg": 48.0
+      },
+      "capture": "C:\\ASTRA-Aerospace-Simulator\\test-results\\graphics-upgrade\\after\\high/moon-descent.png",
+      "draw_calls": 152,
+      "fps": 248.897205454148,
+      "id": "moon-descent",
+      "max_frame_ms": 5.197,
+      "mean_frame_ms": 4.01772289156626,
+      "p50_frame_ms": 3.925,
+      "p95_frame_ms": 4.713,
+      "primitives": 475726,
+      "samples": 498,
+      "simulation_time_s": 34.9999999999999,
+      "terrain_chunks": 97
+    },
+    {
+      "actual_camera_m": [
+        15.9080533981323,
+        5.9819655418396,
+        -15.9080533981323
+      ],
+      "asset": "innerscene-twin-turboprop",
+      "camera": {
+        "azimuth_deg": 135.0,
+        "distance_m": 23.0,
+        "elevation_deg": 12.0,
+        "exposure": 0.9,
+        "focus_height_m": 1.2,
+        "fov_deg": 48.0
+      },
+      "capture": "C:\\ASTRA-Aerospace-Simulator\\test-results\\graphics-upgrade\\after\\high/aircraft.png",
+      "draw_calls": 177,
+      "fps": 243.893418576082,
+      "id": "aircraft",
+      "max_frame_ms": 5.443,
+      "mean_frame_ms": 4.10015163934426,
+      "p50_frame_ms": 4.006,
+      "p95_frame_ms": 4.808,
+      "primitives": 398292,
+      "samples": 488,
+      "simulation_time_s": 89.9999999999992,
+      "terrain_chunks": 97
+    },
+    {
+      "actual_camera_m": [
+        1.81106543540955,
+        0.833966195583344,
+        1.26812052726746
+      ],
+      "asset": "innerscene-quadcopter",
+      "camera": {
+        "azimuth_deg": 55.0,
+        "distance_m": 2.3,
+        "elevation_deg": 16.0,
+        "exposure": 0.9,
+        "focus_height_m": 0.2,
+        "fov_deg": 48.0
+      },
+      "capture": "C:\\ASTRA-Aerospace-Simulator\\test-results\\graphics-upgrade\\after\\high/drone.png",
+      "draw_calls": 81,
+      "fps": 269.393863806435,
+      "id": "drone",
+      "max_frame_ms": 5.387,
+      "mean_frame_ms": 3.71203703703704,
+      "p50_frame_ms": 3.601,
+      "p95_frame_ms": 4.576,
+      "primitives": 50876,
+      "samples": 540,
+      "simulation_time_s": 30.0000000000002,
+      "terrain_chunks": 97
+    }
+  ],
+  "vsync": false,
+  "fixture_sha256": "d8261dfefd6b878d65bb4a718c1cad2b331d482be5f8b7ff5b8fc10070b928f6",
+  "renderer_sha256": "ab1824f85bfd8e0e4128182c000c4003a3e042245b2967848d089b2a04b22424",
+  "sky_shader_sha256": "1e3a6237e9f2a50f2be2ac757f180514b1596a9de263ce206691aecc3cab61c0",
+  "protected_sky_source_sha256": "8a3b5873622cf2d21010c9df802770472c2c148e301fd850f2a56bf8d23b6683",
+  "protected_sky_png_sha256": "15cd96bf742801641d27dfb84b96af898bc5e6397ef7b83f9863679785b9bd35",
+  "capture_script_sha256": "0a63ccaea6583301ea959b58ffb9b1c4e347bdad3032978bafd5dcf8fc834bd5",
+  "disk_shader_cache": false,
+  "protected_sky_identical_pixels": true
+}

@@ -122,6 +122,48 @@ const entries=[
 ['Esplora il sistema solare','Esplora il sistema solare','Explore Solar System','Explorar el Sistema Solar','Explorer le Système solaire','Sonnensystem erkunden','Explorar o Sistema Solar'],
 ['Discipline aerospaziali','Discipline aerospaziali','Aerospace disciplines','Disciplinas aeroespaciales','Disciplines aérospatiales','Luft- und Raumfahrtdisziplinen','Disciplinas aeroespaciais']
 ];
+// Shared with the offline Godot mission board by tools/export_mission_i18n.mjs.
+export const missionMessages={
+ board:['BACHECA MISSIONI','MISSION BOARD'], search:['Cerca missione, luogo o obiettivo…','Search mission, location or objective…'],
+ all:['Tutte le missioni','All missions'], story:['Campagne storia','Story campaigns'], contracts:['Contratti','Contracts'],
+ daily:['Giornalieri','Daily'], weekly:['Settimanali','Weekly'], favorites:['Preferiti','Favorites'], recent:['Recenti','Recent'],
+ difficulty:['Tutte le difficoltà','All difficulties'], duration:['Qualsiasi durata','Any duration'], type:['Tutti i tipi','All types'],
+ sort_difficulty:['Difficoltà crescente','Difficulty ascending'], sort_duration:['Durata crescente','Duration ascending'], sort_reward:['Ricompensa decrescente','Reward descending'],
+ previous:['← Precedenti','← Previous'], next:['Successive →','Next →'], count:['missioni disponibili','missions available'],
+ brief:['BRIEFING','BRIEFING'], objectives:['OBIETTIVI MISURATI','MEASURED OBJECTIVES'], constraints:['VINCOLI DI VOLO','FLIGHT CONSTRAINTS'],
+ reward:['RICOMPENSA','REWARD'], credits:['crediti','credits'], reputation:['reputazione','reputation'], science:['scienza','science'],
+ requirements:['REQUISITI','REQUIREMENTS'], launch:['AVVIA MISSIONE','START MISSION'], locked:['COMPLETA I REQUISITI','COMPLETE REQUIREMENTS'],
+ new:['NUOVA','NEW'], in_progress:['IN CORSO','IN PROGRESS'], completed:['COMPLETATA','COMPLETED'], failed:['NON COMPLETATA','INCOMPLETE'],
+ bronze:['BRONZO','BRONZE'], silver:['ARGENTO','SILVER'], gold:['ORO','GOLD'], select:['Seleziona una missione per leggere il briefing.','Select a mission to read its briefing.'],
+ favorite:['☆ AGGIUNGI AI PREFERITI','☆ ADD TO FAVORITES'], unfavorite:['★ NEI PREFERITI','★ FAVORITED'],
+ empty:['Nessuna missione corrisponde ai filtri.','No missions match these filters.'], loading:['Caricamento…','Loading…'],
+ retry:['RIPROVA SUBITO','RETRY NOW'], checkpoint:['SALVA CHECKPOINT','SAVE CHECKPOINT'], restore:['RIPARTI DAL CHECKPOINT','RESTORE CHECKPOINT'],
+ saved:['Checkpoint salvato per questa sessione.','Checkpoint saved for this session.'], resume:['RIPRENDI VOLO','RESUME FLIGHT'],
+ result:['RISULTATO MISSIONE','MISSION RESULT'], measured:['METRICHE DEL MOTORE','ENGINE METRICS'], next_mission:['MISSIONE SUCCESSIVA','NEXT MISSION'],
+ board_action:['TORNA ALLA BACHECA','BACK TO MISSION BOARD'], time:['Tempo simulato','Simulation time'], distance:['Distanza percorsa','Distance flown'],
+ resource:['Risorsa residua','Remaining resource'], landing_speed:['Velocità touchdown','Touchdown speed'], elapsed_s:['Tempo simulato','Simulation time'],
+ distance_m:['Distanza percorsa','Distance flown'], resource_pct:['Risorsa residua','Remaining resource'], touchdown_speed_m_s:['Velocità touchdown','Touchdown speed'],
+ tutorial:['PRIMO VOLO','FIRST FLIGHT'], hint:['SUGGERIMENTO','TIP'], close:['CHIUDI','CLOSE'], language:['Lingua','Language'],
+ campaign:['CAMPAGNA','CAMPAIGN'], contract:['CONTRATTO','CONTRACT'], minutes:['min','min'], details:['DETTAGLI','DETAILS'],
+ progress:['OBIETTIVI DI VOLO','FLIGHT OBJECTIVES'], career:['CARRIERA','CAREER'], attempts:['tentativi','attempts'],
+ controls:['WASD / Q E assetto · Shift/Ctrl spinta · Spazio pausa','WASD / Q E attitude · Shift/Ctrl throttle · Space pause'],
+ reset_notice:['Riprovare riavvia il volo; i premi già ottenuti non vengono duplicati.','Retry restarts the flight; previously earned rewards are not duplicated.'],
+ max_altitude_m:['Quota massima','Maximum altitude'], max_load_factor_g:['Carico massimo','Maximum load factor'], min_resource_pct:['Riserva minima','Minimum reserve'],
+ relative_range_m:['Distanza dal bersaglio','Target distance'], relative_speed_m_s:['Velocità relativa','Relative speed'],
+ deadline_s:['Tempo limite · s','Time limit · s'], max_speed_m_s:['Velocità massima · m/s','Maximum speed · m/s'], max_elapsed_s:['Tempo massimo per bonus · s','Bonus time limit · s'],
+ bonus:['OBIETTIVI BONUS','BONUS OBJECTIVES'], medal_rules:['Bronzo: obiettivi primari. Argento: almeno un bonus. Oro: tutti i bonus.','Bronze: primary objectives. Silver: at least one bonus. Gold: all bonuses.'],
+ CRASHED:['Il veicolo ha subito un impatto.','The vehicle crashed.'], ABORTED:['Volo interrotto.','Flight aborted.'],
+ DEADLINE_EXCEEDED:['Tempo limite superato.','Time limit exceeded.'], RESOURCE_RESERVE_EXCEEDED:['Riserva minima esaurita.','Minimum resource reserve exhausted.'],
+ SPEED_LIMIT_EXCEEDED:['Limite di velocità superato.','Speed limit exceeded.'], OBJECTIVES_INCOMPLETE_AT_LANDING:['Atterraggio concluso con obiettivi ancora da completare.','Landed with outstanding objectives.'],
+ failures:['Voli non completati','Incomplete flights'], flight_seconds:['Tempo di volo totale · s','Total flight time · s'], completed_count:['Missioni completate','Completed missions'],
+ mission_requirement:['Completa prima','Complete first'], space_skyward:['SKYWARD · Ascesa suborbitale','SKYWARD · Suborbital ascent'],
+ space_pulsar:['PULSAR · Rendezvous in LEO','PULSAR · LEO rendezvous'], space_depot:['WAYFARER · Prossimità orbitale','WAYFARER · Orbital proximity'],
+ space_selene:['SELENE · Discesa di precisione','SELENE · Precision descent'], space_shackleton:['SHACKLETON · Campionamento','SHACKLETON · Sampling'],
+ space_vesta:['VESTA · Recupero campioni','VESTA · Sample recovery'], air_blue_line:['BLUE LINE · Circuito','BLUE LINE · Circuit'],
+ air_alpine:['ALPINE WINDOW · Rotta in quota','ALPINE WINDOW · Altitude route'], air_recovery:['RUNWAY 27 · Rientro','RUNWAY 27 · Recovery'],
+ drone_grid:['GRID 04 · Ispezione','GRID 04 · Inspection'], drone_tower:['TOWER ECHO · Rilievo','TOWER ECHO · Survey'], drone_med:['AEROSOL-3 · Campionamento','AEROSOL-3 · Sampling']
+};
+for(const values of Object.values(missionMessages))entries.push([values[0],...values]);
 const columns={it:1,en:2,es:3,fr:4,de:5,pt:6};
 const dictionary=new Map(entries.map(row=>[row[0],row]));
 function norm(value){return value.replace(/\s+/g,' ').trim();}

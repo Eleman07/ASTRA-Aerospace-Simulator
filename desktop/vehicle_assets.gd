@@ -51,7 +51,7 @@ func automatic(state):
     return str(defaults.get(str(state.get("model_id","")),"nasa-insight" if state.get("scenario")=="planetary" else "nasa-sls-block1" if state.get("vehicle")=="space" else "innerscene-twin-turboprop" if state.get("vehicle")=="aircraft" else "innerscene-quadcopter"))
 
 func choose_file(record,state,quality):
-    var file=str(record.get("high_file",record.file)) if quality in ["high","ultra"] else str(record.file)
+    var file=str(record.get("high_file",record.file)) if quality in ["high","ultra","cinema"] else str(record.file)
     if state.get("scenario")=="orbital":file=str(record.get("orbit_file",file))
     elif int(state.get("active_stage",1))>1:file=str(record.get("stage_file",file))
     if state.get("phase","") in ["AEROSHELL","DROGUE","PARACHUTE","LANDED"]:file=str(record.get("recovery_file",file))
@@ -126,3 +126,34 @@ func instantiate(path,record,size,dimension=1,center=false):
 func clear():
     for node in cache.values():node.free()
     cache.clear();cache_order.clear()
+
+var detail_normal
+func add_surface_detail(instance):
+    # Original tileable micro-panels, rivets and brushed finish. Preserve authored
+    # color, metallic, AO, normal, alpha and emission maps; only add absent normals.
+    if detail_normal==null:
+        var image=Image.create(256,256,false,Image.FORMAT_RGB8)
+        for y in range(256):
+            for x in range(256):
+                var seam_x=1.0 if x%64==0 else -1.0 if x%64==2 else 0.0
+                var seam_y=1.0 if y%64==0 else -1.0 if y%64==2 else 0.0
+                var rivet=Vector2(float(x%64)-7,float(y%64)-7)
+                var radial=rivet.normalized()*.13 if rivet.length()<2.5 else Vector2.ZERO
+                var brush=sin(float(y)*2.7+float(x)*.13)*.018
+                image.set_pixel(x,y,Color(.5+seam_x*.12+radial.x,.5+seam_y*.12+radial.y+brush,1))
+        image.generate_mipmaps();detail_normal=ImageTexture.create_from_image(image)
+    for node in instance.find_children("*","MeshInstance3D",true,false):
+        node.gi_mode=GeometryInstance3D.GI_MODE_STATIC
+        for index in range(node.mesh.get_surface_count()):
+            var source=node.get_active_material(index)
+            if not source is StandardMaterial3D:continue
+            var material=source.duplicate()
+            material.texture_filter=BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+            if material.transparency==BaseMaterial3D.TRANSPARENCY_DISABLED:
+                if not material.normal_enabled:
+                    material.normal_enabled=true;material.normal_texture=detail_normal;material.normal_scale=.28
+                    if material.albedo_texture==null:
+                        material.uv1_triplanar=true;material.uv1_scale=Vector3(2,2,2)
+                if material.metallic>.25:
+                    material.clearcoat_enabled=true;material.clearcoat=.22;material.clearcoat_roughness=.3
+            node.set_surface_override_material(index,material)

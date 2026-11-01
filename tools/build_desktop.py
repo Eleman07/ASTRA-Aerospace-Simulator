@@ -14,8 +14,8 @@ import sys
 import zipfile
 
 ROOT=Path(__file__).resolve().parents[1]
-VERSION='2.4.1'
-SDK_VERSION='2.4.1'
+VERSION='2.5.0'
+SDK_VERSION='2.5.0'
 TOOLCHAIN=ROOT/'build/toolchain/godot'
 PAYLOAD=ROOT/f'dist/ASTRA-Desktop-{VERSION}'
 
@@ -111,7 +111,7 @@ func _initialize():
 ''',encoding='utf-8')
     subprocess.run([str(editor),'--headless','--path',str(ROOT/'desktop'),'--script',str(check_script),'--',str(exported)],check=True,cwd=ROOT,env=godot_env)
     command=[sys.executable,'-m','PyInstaller','--noconfirm','--onedir','--windowed','--name','ASTRA',
-             '--icon',str(icon),'--collect-submodules','astra','--distpath',str(ROOT/'dist/native-desktop'),
+             '--icon',str(icon),'--collect-submodules','astra','--collect-data','astra','--distpath',str(ROOT/'dist/native-desktop'),
              '--workpath',str(ROOT/'build/native-desktop'),'--specpath',str(ROOT/'build'),str(ROOT/'desktop_runtime.py')]
     subprocess.run(command,check=True,cwd=ROOT)
     shutil.copytree(ROOT/'dist/native-desktop/ASTRA',PAYLOAD,dirs_exist_ok=True)

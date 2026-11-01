@@ -24,10 +24,11 @@ from astra.attitude import _q_rotate
 from native_visuals import NativeVisuals
 from native_telemetry import flight_details
 from astra.celestial import celestial_catalog
-from astra.gameplay import GameSession, find_mission, mission_catalog
+from astra.gameplay import GameSession
+from astra.career_runtime import (career_defaults, initialize_game, before_game_step, advance_game, game_snapshot, dispatch_game)
 from datetime import datetime,timedelta,timezone
 
-DESKTOP_VERSION='2.4.1'
+DESKTOP_VERSION='2.5.0'
 
 
 def unit(v):
@@ -109,6 +110,7 @@ class DesktopRuntime:
         self.game_session=GameSession()
         self.game_awarded=False
         self.career=self._load_career()
+        initialize_game(self)
         self.sky_epoch=datetime(2026,10,28,tzinfo=timezone.utc)
         self.sky_cache_time=None;self.sky_catalog={}
         self.engine=browser_bridge.engine
@@ -123,9 +125,7 @@ class DesktopRuntime:
 
     @classmethod
     def _load_career(cls):
-        defaults=dict(credits=25000,reputation=0,science=0,launches=0,missions_completed=0,
-                      completed_missions=[],unlocked_technologies=['flight_basics'],
-                      facilities={'hangar':1,'mission_control':1,'research':1})
+        defaults=career_defaults()
         try:
             data=json.loads(cls._career_file().read_text(encoding='utf-8'))
             for key in defaults:
@@ -171,22 +171,10 @@ class DesktopRuntime:
 
     def _step(self,dt):
         if self.play_mode=='free' and self.running and self.clock_owner=='desktop' and not self.engine.mission_started:self._launch_desktop()
+        before_game_step(self)
         start=time.perf_counter();state=self.engine.step(dt)
         self.compute_ms=(time.perf_counter()-start)*1000
-        if self.game_session.mission is not None:
-            progress=self.game_session.update(state,dt)
-            if progress['complete'] and not self.game_awarded:
-                reward=progress['mission']['reward']
-                self.career['credits']+=int(reward['credits'])
-                self.career['reputation']+=int(reward['reputation'])
-                self.career['science']+=int(reward['science'])
-                self.career['missions_completed']+=1
-                self.career['completed_missions'].append(progress['mission']['id'])
-                self.game_awarded=True
-                self.events.append(dict(type='CAREER_MISSION_COMPLETE',mission_id=progress['mission']['id'],
-                                        reward=copy.deepcopy(reward),time_s=state['time_s']))
-                self._save_career()
-                self.running=False
+        advance_game(self,state,dt)
         self._record(state)
         if state['phase'] in {'LANDED','CRASHED','ABORTED'}:self.running=False
         return state
@@ -245,7 +233,7 @@ class DesktopRuntime:
         if self.engine.vehicle=='space' and self.engine.scenario!='planetary':
             visual['reference_geometry']=copy.deepcopy(getattr(self.engine,'launch_vehicle',{}))
         return dict(state=state,visual=visual,flight_details=flight_details(state),view=self.visuals.view(),capture_requests=self.visuals.pending(),
-                    game=self.game_session.snapshot(),career=copy.deepcopy(self.career),desktop=dict(
+                    game=game_snapshot(self),career=copy.deepcopy(self.career),desktop=dict(
             version=DESKTOP_VERSION,running=self.running,speed=self.speed,
             play_mode=self.play_mode,
             clock_owner=self.clock_owner,revision=self.revision,
@@ -260,42 +248,8 @@ class DesktopRuntime:
         with self.lock:
             self.api_calls+=1
             if endpoint=='/desktop/snapshot':return self._snapshot()
-            if endpoint=='/desktop/game/catalog':return mission_catalog(payload.get('vehicle'))
-            if endpoint=='/desktop/game/career':return copy.deepcopy(self.career)
-            if endpoint=='/desktop/game/career/upgrade':
-                facility=str(payload.get('facility',''))
-                if facility not in self.career['facilities']:raise ValueError('Unknown ASTRA facility')
-                level=int(self.career['facilities'][facility])
-                if level>=3:raise ValueError('Facility is already at maximum level')
-                cost=level*5000
-                if self.career['credits']<cost:raise ValueError('Not enough career credits')
-                self.career['credits']-=cost;self.career['facilities'][facility]=level+1
-                self._save_career();return copy.deepcopy(self.career)
-            if endpoint=='/desktop/game/career/unlock':
-                technology=str(payload.get('technology',''))
-                costs={'orbital_operations':15,'planetary_science':30,'precision_navigation':45}
-                if technology not in costs:raise ValueError('Unknown ASTRA technology')
-                if technology in self.career['unlocked_technologies']:return copy.deepcopy(self.career)
-                if self.career['science']<costs[technology]:raise ValueError('Not enough science points')
-                self.career['science']-=costs[technology]
-                self.career['unlocked_technologies'].append(technology)
-                self._save_career();return copy.deepcopy(self.career)
-            if endpoint=='/desktop/game/state':
-                return dict(game=self.game_session.snapshot(),career=copy.deepcopy(self.career))
-            if endpoint=='/desktop/game/abandon':
-                self.game_session=GameSession();self.game_awarded=False
-                return self._snapshot()
-            if endpoint=='/desktop/game/start':
-                mission=find_mission(str(payload.get('mission_id','')))
-                ordered=mission_catalog(mission['vehicle'])[mission['vehicle']]
-                index=next(i for i,item in enumerate(ordered) if item['id']==mission['id'])
-                if index>0 and ordered[index-1]['id'] not in self.career['completed_missions']:
-                    raise ValueError('Complete the previous career operation in this discipline first')
-                self.dispatch('/desktop/free',dict(vehicle=mission['vehicle'],scenario=mission['scenario'],
-                                                   advanced_models=True),'POST')
-                self.game_session.start(mission['id']);self.game_awarded=False
-                self.career['launches']+=1;self._save_career()
-                return self._snapshot()
+            if endpoint.startswith('/desktop/game/'):
+                return dispatch_game(self,endpoint,payload)
             if endpoint=='/desktop/flight-details':return flight_details(self.engine.state())
             if endpoint=='/desktop/free':
                 vehicle=payload.get('vehicle','space');scenario=payload.get('scenario','mission')
@@ -304,7 +258,7 @@ class DesktopRuntime:
                 if vehicle!='space' and scenario!='mission':raise ValueError('Aircraft/UAV free flight starts at the airfield')
                 self.dispatch('/reset',payload,'POST')
                 self.play_mode='free';self.clock_owner='desktop'
-                self.game_session=GameSession();self.game_awarded=False
+                self.game_session=GameSession();self.game_awarded=False;initialize_game(self)
                 self._command(dict(mode='manual',throttle_pct=0,pitch_deg=90 if vehicle=='space' and scenario=='mission' else 0))
                 return self._snapshot()
             if endpoint=='/desktop/view':return self.visuals.update(payload) if method=='POST' else self.visuals.view()
@@ -364,6 +318,7 @@ class DesktopRuntime:
             if endpoint=='/reset':
                 self.running=False;self._disarm('MISSION_RESET');self.revision+=1
                 self.play_mode='mission'
+                self.game_session=GameSession();self.game_awarded=False;initialize_game(self)
                 self.samples=[];self.events=[];self.dropped_samples=0;self.next_sample=0.
             raw=json.dumps(dict(path=endpoint,payload=payload,method=method),allow_nan=False)
             result=json.loads(browser_bridge.route_raw(raw))
@@ -422,8 +377,8 @@ def main():
             json.dumps(visual_frame(state),allow_nan=False)
         print('ASTRA DESKTOP SELF TEST PASS',flush=True);return 0
     runtime=DesktopRuntime()
-    initial_quality=args.quality if args.quality in {'low','balanced','high','ultra'} else 'balanced'
-    initial_scale={'low':.65,'balanced':.67,'high':1.0,'ultra':1.15}[initial_quality]
+    initial_quality=args.quality if args.quality in {'low','balanced','high','ultra','cinema'} else 'balanced'
+    initial_scale={'low':.65,'balanced':.67,'high':1.0,'ultra':1.15,'cinema':1.5}[initial_quality]
     runtime.visuals.update({'quality':initial_quality,'resolution_scale':initial_scale})
     try:
         try:server=ThreadingHTTPServer(('127.0.0.1',args.port),make_handler(runtime))

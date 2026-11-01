@@ -14,7 +14,7 @@ import math
 from typing import Any
 
 from . import __version__
-from .attitude import LaunchVehicleAttitude, SpacecraftAttitude
+from .attitude import LaunchVehicleAttitude, SpacecraftAttitude, _cross
 from .aerodynamics import (fixed_wing_coefficients,
                            fixed_wing_moment_coefficients)
 from .atmosphere import ATMOSPHERE_MODEL, atmosphere_isa
@@ -357,6 +357,7 @@ class SimulationEngine:
                         "attitude_target_deg": [0.0, 0.0, 0.0],
                         "attitude_torque_body_fraction": [0.0, 0.0, 0.0],
                         "attitude_sas_mode": "stability_assist",
+                        "sas_enabled": False,
                         "maneuver_direction_eci": None,
                         "brakes_pct": 0.0,
                         "mode": "auto"}
@@ -1077,6 +1078,7 @@ class SimulationEngine:
 
     def set_command(self, payload: dict[str, Any], _radio_delivery: bool = False,
                     _command_time_s: float | None = None) -> dict[str, Any]:
+        payload = self._validated_sas_command(payload)
         if (self.science and self.science.config['radio_commands'] and
                 str(payload.get('mode',self.command['mode'])).lower() == 'python'
                 and not _radio_delivery):
@@ -1136,26 +1138,38 @@ class SimulationEngine:
             sas_mode = str(payload["attitude_sas_mode"]).lower()
             if sas_mode not in {"manual", "stability_assist", "prograde", "retrograde",
                                 "radial_in", "radial_out", "normal", "anti_normal",
-                                "target", "maneuver_node", "lvlh"}:
+                                "target", "anti_target", "maneuver_node", "lvlh"}:
                 raise ValueError("Unknown attitude_sas_mode")
             if sas_mode == "maneuver_node" and self.command.get("maneuver_direction_eci") is None:
                 raise ValueError("Define maneuver_direction_eci before selecting maneuver-node SAS")
             self.command["attitude_sas_mode"] = sas_mode
+        if "sas_enabled" in payload:
+            was_enabled = self.command.get("sas_enabled", False)
+            self.command["sas_enabled"] = payload["sas_enabled"]
+            if (payload["sas_enabled"] and not was_enabled and
+                    self.spacecraft_attitude is not None):
+                # Enabling hold captures this instant, including while paused.
+                self.spacecraft_attitude.inertial_hold_quaternion = (
+                    self.spacecraft_attitude.quaternion_body_to_eci[:])
         if "mode" in payload:
             mode = str(payload["mode"]).lower()
             if mode not in {"auto", "manual", "python"}:
                 raise ValueError("mode must be auto, manual or python")
             previous_mode = self.command["mode"]
             self.command["mode"] = mode
-            if self.vehicle == "space" and self.scenario == "orbital" and "attitude_sas_mode" not in payload:
+            if mode == "auto":
+                self.command["sas_enabled"] = False
+            if self.vehicle == "space" and self.scenario == "orbital" and "attitude_sas_mode" not in payload and "sas_enabled" not in payload:
                 if mode == "auto":
                     self.command["attitude_sas_mode"] = "lvlh"
                 elif mode == "manual" and previous_mode != "manual":
                     self.command["attitude_sas_mode"] = "manual"
+                    self.command["sas_enabled"] = False
                 elif mode == "python" and "attitude_target_deg" in payload:
                     # Preserve the legacy Python target-angle API as an explicit
                     # LVLH target; new clients should prefer SAS or torque input.
                     self.command["attitude_sas_mode"] = "lvlh"
+                    self.command["sas_enabled"] = True
             if (mode != previous_mode and "attitude_torque_body_fraction" not in payload and
                     self.scenario == "orbital"):
                 self.command["attitude_torque_body_fraction"] = [0.0, 0.0, 0.0]
@@ -1178,6 +1192,111 @@ class SimulationEngine:
                 self.external_control["state"] = "DISARMED"
         return self.state()
 
+    def _validated_sas_command(self, payload: dict[str, Any]) -> dict[str, Any]:
+        """Validate the new command surface before mutating any flight command.
+
+        Legacy ``attitude_sas_mode`` remains valid. An explicit enable enters
+        pilot authority with an inertial hold; GNC retains its own LVLH mode.
+        """
+        command = dict(payload)
+        named = "attitude_sas_mode" in command
+        toggled = "sas_enabled" in command
+        if toggled and not isinstance(command["sas_enabled"], bool):
+            raise ValueError("sas_enabled must be boolean")
+        direction = command.get("maneuver_direction_eci", self.command.get("maneuver_direction_eci"))
+        if "maneuver_direction_eci" in command and direction is not None:
+            if (not isinstance(direction, (list, tuple)) or len(direction) != 3 or
+                    any(isinstance(v, bool) or not isinstance(v, (int, float)) or
+                        not math.isfinite(v) for v in direction) or
+                    _norm3(direction) < 1e-9):
+                raise ValueError("maneuver_direction_eci must be a nonzero finite 3-vector")
+        if named:
+            mode = str(command["attitude_sas_mode"]).lower()
+            allowed = {"manual", "stability_assist", "prograde", "retrograde",
+                       "normal", "anti_normal", "radial_in", "radial_out",
+                       "target", "anti_target", "maneuver_node", "lvlh"}
+            if mode not in allowed:
+                raise ValueError("Unknown attitude_sas_mode")
+            if mode == "maneuver_node" and direction is None:
+                raise ValueError("Define maneuver_direction_eci before selecting maneuver-node SAS")
+            if mode in {"target", "anti_target"}:
+                target = getattr(self, "target_orbit", None)
+                if (self.vehicle != "space" or self.scenario != "orbital" or
+                        not target or _norm3([target[i]-self.orbit[i] for i in range(3)]) < 1e-6):
+                    raise ValueError("Target SAS requires a distinct orbital target")
+            command["attitude_sas_mode"] = mode
+            command.setdefault("sas_enabled", mode != "manual")
+        elif toggled and command["sas_enabled"]:
+            command["attitude_sas_mode"] = "stability_assist"
+        elif ("maneuver_direction_eci" in command and direction is None and
+              self.command.get("attitude_sas_mode") == "maneuver_node"):
+            # Removing a node disengages its target safely, without a step-time
+            # exception or silently continuing to point at a deleted vector.
+            command["attitude_sas_mode"] = "stability_assist"
+        if toggled and command["sas_enabled"]:
+            if self.vehicle != "space" or self.scenario != "orbital":
+                raise ValueError("SAS is available for the orbital reaction-wheel controller")
+            command.setdefault("mode", "manual")
+            if command["mode"] == "auto":
+                raise ValueError("SAS and autonomous GNC cannot own attitude simultaneously")
+        elif toggled:
+            command.setdefault("mode", "manual")
+        return command
+
+    def _effective_sas_mode(self) -> str:
+        if self.command["mode"] == "auto":
+            return "lvlh"
+        selected = self.command["attitude_sas_mode"]
+        if not self.command.get("sas_enabled", selected != "manual"):
+            return "manual"
+        if selected in {"target", "anti_target"}:
+            target = getattr(self, "target_orbit", None)
+            if not target or _norm3([target[i]-self.orbit[i] for i in range(3)]) < 1e-6:
+                return "stability_assist"
+        if selected == "maneuver_node" and self.command.get("maneuver_direction_eci") is None:
+            return "stability_assist"
+        return selected
+
+    def _sas_state(self) -> dict[str, Any]:
+        supported = self.vehicle == "space" and self.scenario == "orbital"
+        if not supported or self.spacecraft_attitude is None:
+            return dict(supported=False, enabled=False, mode="manual", available_modes=[],
+                        manual_override=False, authority="unsupported", markers={},
+                        reason="ORBITAL_REACTION_WHEEL_CONTROLLER_ONLY")
+        attitude = self.spacecraft_attitude
+        radial = [v/_norm3(self.orbit[:3]) for v in self.orbit[:3]]
+        speed = _norm3(self.orbit[3:])
+        velocity = [v/max(speed, 1e-20) for v in self.orbit[3:]]
+        normal = _cross(self.orbit[:3], self.orbit[3:])
+        normal = [v/max(_norm3(normal), 1e-20) for v in normal]
+        vectors = {"prograde": velocity, "retrograde": [-v for v in velocity],
+                   "normal": normal, "anti_normal": [-v for v in normal],
+                   "radial_in": [-v for v in radial], "radial_out": radial}
+        target = getattr(self, "target_orbit", None)
+        if target:
+            delta = [target[i]-self.orbit[i] for i in range(3)]
+            length = _norm3(delta)
+            if length > 1e-6:
+                vectors["target"] = [v/length for v in delta]
+                vectors["anti_target"] = [-v/length for v in delta]
+        maneuver = self.command.get("maneuver_direction_eci")
+        if maneuver is not None:
+            vectors["maneuver_node"] = [v/_norm3(maneuver) for v in maneuver]
+        markers = {mode: dict(direction_eci=vector,
+                             direction_body=attitude.vector_eci_to_body(vector), axis="x")
+                   for mode, vector in vectors.items()}
+        enabled = self.command["mode"] != "auto" and self._effective_sas_mode() != "manual"
+        override = (enabled and self._effective_sas_mode() != "lvlh" and
+                    any(abs(v) > 1e-6 for v in self.command["attitude_torque_body_fraction"]))
+        return dict(supported=True, enabled=enabled, mode=self.command["attitude_sas_mode"],
+                    effective_mode=self._effective_sas_mode(), available_modes=["stability_assist", *vectors],
+                    manual_override=override, authority="gnc" if self.command["mode"] == "auto" else "pilot",
+                    markers=markers, actuator="reaction_wheels",
+                    torque_limit_N_m=attitude.wheel_torque_limit_N_m[:],
+                    momentum_limit_N_m_s=attitude.wheel_momentum_limit_N_m_s[:],
+                    wheel_saturated=attitude.wheel_saturated[:],
+                    propellant_used_for_attitude=False)
+
     def _update_python_control_watchdog(self, time_s: float) -> None:
         """Return to a vehicle-specific autonomous response after link loss."""
         link = self.external_control
@@ -1194,6 +1313,7 @@ class SimulationEngine:
         self.command["mode"] = "auto"
         if self.vehicle == "space" and self.scenario == "orbital":
             self.command["attitude_sas_mode"] = "lvlh"
+            self.command["sas_enabled"] = False
         if self.vehicle == "space":
             link["state"] = "AUTO_TAKEOVER"
             action = "RESUME_AUTONOMOUS_MISSION_GUIDANCE"
@@ -1289,6 +1409,12 @@ class SimulationEngine:
         advanced_s = 0.0
         for step_index in range(n):
             self._update_python_control_watchdog(self.t + advanced_s)
+            if (self.vehicle == "space" and self.scenario == "orbital" and
+                    self.command["mode"] != "auto" and self.command.get("sas_enabled") and
+                    self._effective_sas_mode() != self.command["attitude_sas_mode"]):
+                self.command["attitude_sas_mode"] = "stability_assist"
+                self.spacecraft_attitude.inertial_hold_quaternion = (
+                    self.spacecraft_attitude.quaternion_body_to_eci[:])
             if self.phase in {"LANDED", "CRASHED", "ABORTED"}:
                 break
             old_phase = self.phase
@@ -1465,8 +1591,7 @@ class SimulationEngine:
                         self.spacecraft_attitude.step(
                             segment_h, self.orbit[:3], self.orbit[3:], MU_EARTH,
                             self.command["attitude_target_deg"],
-                            control_mode=("lvlh" if self.command["mode"] == "auto"
-                                          else self.command["attitude_sas_mode"]),
+                            control_mode=self._effective_sas_mode(),
                             manual_torque_body_fraction=self.command[
                                 "attitude_torque_body_fraction"],
                             target_position_eci_m=self.target_orbit[:3],
@@ -2913,8 +3038,7 @@ class SimulationEngine:
         if self.spacecraft_attitude is None:
             return {"attitude_deg": None,
                     "attitude_state_status": "NOT_MODELLED"}
-        control_mode = ("lvlh" if self.command["mode"] == "auto"
-                        else self.command["attitude_sas_mode"])
+        control_mode = self._effective_sas_mode()
         telemetry = self.spacecraft_attitude.telemetry(control_mode)
         telemetry["attitude_target_deg"] = list(self.command["attitude_target_deg"])
         return {
@@ -3296,8 +3420,10 @@ class SimulationEngine:
                 load_factor_g=self.load_factor_g,mission_metrics=dict(self.mission_metrics),
                 fault=self.fault,model='LIVE_LUNAR_6DOF_VARIABLE_INERTIA_RK4',
                 science=self.science.snapshot() if self.science else {'enabled':False})
+            result['sas'] = self._sas_state()
             return result
         result = self._flight_state()
+        result['sas'] = self._sas_state()
         if not self.live_systems.snapshot():
             self.live_systems.advance(self, 0.0, self.t)
         result["live_systems"] = self.live_systems.snapshot()

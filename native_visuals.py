@@ -15,7 +15,7 @@ class NativeVisuals:
         self.catalog=json.loads(path.read_text(encoding='utf-8'))
         self.ids={entry['id'] for entry in self.catalog['models']}
         self.settings=dict(model='auto',azimuth_deg=37.24,elevation_deg=14.32,distance_m=None,
-                           show_ui=True,exposure=1.,nebula_strength=.9,resolution_scale=.67,quality='balanced',auto_exposure=False,depth_of_field=False,audio_enabled=True,audio_volume=.6,cinematic_effects=True)
+                           show_ui=True,exposure=1.,nebula_strength=.9,resolution_scale=.67,quality='balanced',auto_exposure=False,depth_of_field=False,audio_enabled=True,audio_volume=.6,cinematic_effects=True,enhanced_materials=True,earthshine=True)
         self.revision=0;self.jobs={};self.renderer={};self.renderer_wall=None
         self.changed=list(self.settings)
 
@@ -25,7 +25,8 @@ class NativeVisuals:
         if not set(payload).issubset(self.settings):raise ValueError('Unknown presentation setting')
         settings=dict(self.settings,**payload)
         if settings['model'] not in self.ids|{'auto'}:raise ValueError('Choose a model ID from desktop/assets')
-        if settings['quality'] not in {'low','balanced','high','ultra'}:raise ValueError('quality must be low, balanced, high or ultra')
+        if settings['quality'] not in {'low','balanced','high','ultra','cinema'}:raise ValueError('quality must be low, balanced, high, ultra or cinema')
+        if any(not isinstance(settings[key],bool) for key in ('enhanced_materials','earthshine')):raise ValueError('Material and lighting controls must be boolean')
         if not isinstance(settings['show_ui'],bool):raise ValueError('show_ui must be boolean')
         if not isinstance(settings['audio_enabled'],bool):raise ValueError('audio_enabled must be boolean')
         if not isinstance(settings['cinematic_effects'],bool):raise ValueError('cinematic_effects must be boolean')
@@ -72,7 +73,7 @@ class NativeVisuals:
         if payload is not None:
             allowed={'backend','adapter','fps','draw_calls','primitives','objects','asset_id','asset_file',
                      'asset_error','asset_loaded','cache_loads','cache_hits','view_revision','resolution_scale','camera',
-                     'input_revision','input_rtt_ms'}
+                     'input_revision','input_rtt_ms','frame_time_ms'}
             if not set(payload).issubset(allowed):raise ValueError('Unknown renderer report field')
             self.renderer=copy.deepcopy(payload);self.renderer_wall=time.monotonic()
         age=time.monotonic()-self.renderer_wall if self.renderer_wall else None
