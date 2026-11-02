@@ -14,11 +14,13 @@ class FlightUI extends Main:
     var play_count=0
     var sas_count=0
     var sas_cycle_count=0
+    var gnc_count=0
     func _ready():pass
     func _process(_dt):pass
     func toggle_play():play_count+=1
     func toggle_sas():sas_count+=1
     func cycle_sas(_direction=1):sas_cycle_count+=1
+    func automatic():gnc_count+=1;pilot.disarm()
 
 func require(condition,message):
     if not condition:
@@ -118,6 +120,27 @@ func run():
     var cancel=InputEventJoypadButton.new();cancel.device=0;cancel.button_index=JOY_BUTTON_B;cancel.pressed=true
     Input.parse_input_event(cancel);await process_frame;await process_frame
     if not require(not is_instance_valid(menu),"B did not close the menu panel"):return
+    pilot.apply_profile(NativeInput.hotas_profile());pilot.armed=true
+    for number in [0,1,2,7,8]:
+        var hotas_event=InputEventJoypadButton.new();hotas_event.device=0;hotas_event.button_index=number;hotas_event.pressed=true
+        Input.parse_input_event(hotas_event);await process_frame
+        hotas_event=InputEventJoypadButton.new();hotas_event.device=0;hotas_event.button_index=number;hotas_event.pressed=false
+        Input.parse_input_event(hotas_event);await process_frame
+    if not require(flight.sas_count==3 and flight.sas_cycle_count==2 and flight.play_count==2 and flight.gnc_count==1,"HOTAS action routing failed"):return
+    if not require(button_calls[0]==1,"HOTAS trigger activated Xbox menu action"):return
+    print("HOTAS ROUTING PASS: trigger SAS, next preset, brakes isolated, pause and GNC without Xbox menu leakage")
+    var hotas_menu=MenuWindow.new();flight.add_child(hotas_menu)
+    hotas_menu.hotas_input_router=Callable(flight,"route_hotas_menu_input")
+    var hotas_button=Button.new();hotas_button.text="MUST NOT ACTIVATE";hotas_menu.add_child(hotas_button)
+    hotas_button.pressed.connect(func():button_calls[0]+=100)
+    hotas_menu.popup_centered(Vector2i(400,200));hotas_button.grab_focus();await process_frame
+    pilot.armed=true
+    var in_menu=InputEventJoypadButton.new();in_menu.device=0;in_menu.button_index=0;in_menu.pressed=true
+    Input.parse_input_event(in_menu);await process_frame
+    in_menu=InputEventJoypadButton.new();in_menu.device=0;in_menu.button_index=0;in_menu.pressed=false
+    Input.parse_input_event(in_menu);await process_frame
+    if not require(flight.sas_count==4 and button_calls[0]==1,"HOTAS trigger leaked into child-window GUI"):return
+    hotas_menu.queue_free();await process_frame
     flight.desktop={"clock_owner":"external"}
     if not require(flight.collect_pilot(.02).is_empty() and not pilot.armed,"Python clock must retain exclusive control"):return
     print("INPUT PIPELINE PASS: exact settings, no lost time, sticks isolated in root and child menus, D-pad navigates, A confirms, B closes panel, Start toggles once, Python clock exclusive")

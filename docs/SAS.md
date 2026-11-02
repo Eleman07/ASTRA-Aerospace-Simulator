@@ -38,8 +38,22 @@ Il controllore integra il quaternione e le velocità angolari con coppia e
 momento angolare limitati dalle ruote di reazione del modello Python. Una
 rotazione di 180° richiede tempo fisico. Queste ruote non consumano carburante
 RCS: la telemetria lo dichiara, senza inventare un attuatore a propellente.
-Su lanciatore, aereo, UAV e lander è disponibile Stability Assist: mantiene i riferimenti locali di assetto tramite i controllori fisici esistenti. Gli input manuali aggiornano il riferimento mantenuto al rilascio. Non è un controllo automatico di quota, posizione o manetta. I preset direzionali sono orbitali.
+Su lanciatore, aereo, UAV e lander è disponibile Stability Assist: mantiene i riferimenti locali di assetto tramite i controllori fisici esistenti. Gli input manuali aggiornano il riferimento mantenuto al rilascio. Non è un controllo automatico di quota, posizione o manetta. I preset direzionali sono disponibili in orbita e sul lanciatore con attuatori TVC/ACS.
 
 Verifica: `python -m unittest tools.test_orbital_sas` e
 `python tools/test_input_routing.py`. Le prove di GUI iniettano eventi reali
 Godot; non equivalgono a una prova fisica di Xbox/HOTAS collegato.
+
+
+## Versione2.5.3: modalità visibili e lanciatore
+
+L'anello mostra tutti i preset. Quelli non disponibili sono disabilitati; il
+puntatore mostra il motivo. Z/X e il pulsante successivo saltano i preset disabilitati.
+Sul lanciatore: Stability, Radial In/Out e Normal/Anti-Normal; Target/Anti-Target
+richiedono bersaglio e Maneuver un vettore. Prograde/Retrograde seguono la velocità
+rispetto al suolo e si abilitano oltre1m/s. L'asse puntato è +Z sul lanciatore e +X
+sul veicolo orbitale; i marker usano il riferimento corretto. L'orientamento evolve
+tramite gli attuatori fisici esistenti, senza modificare istantaneamente i quaternioni.
+La scelta di un assetto non gestisce manetta o traiettoria di lancio.
+Aereo/UAV/lander mantengono Stability Assist; le direzioni spaziali sono visibili
+ma disabilitate con spiegazione, senza inventare un autopilota adatto a ogni veicolo.

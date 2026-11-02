@@ -1227,8 +1227,12 @@ class SimulationEngine:
         if "sas_manual_input" in command and not isinstance(command["sas_manual_input"], bool):
             raise ValueError("sas_manual_input must be boolean")
         if (self.vehicle != "space" or self.scenario != "orbital") and named:
-            if command["attitude_sas_mode"] not in {"manual", "stability_assist"}:
-                raise ValueError("This vehicle supports Stability Assist; directional presets require orbit")
+            local_modes={"manual", "stability_assist"}
+            if self.vehicle == "space" and getattr(self, "launch_vehicle_attitude", None) is not None:
+                local_modes.update(self._launch_sas_vectors())
+                if command.get("maneuver_direction_eci") is not None:local_modes.add("maneuver_node")
+            if command["attitude_sas_mode"] not in local_modes:
+                raise ValueError("SAS direction unavailable for this vehicle/state")
         direction = command.get("maneuver_direction_eci", self.command.get("maneuver_direction_eci"))
         if "maneuver_direction_eci" in command and direction is not None:
             if (not isinstance(direction, (list, tuple)) or len(direction) != 3 or
@@ -1247,7 +1251,7 @@ class SimulationEngine:
                 raise ValueError("Define maneuver_direction_eci before selecting maneuver-node SAS")
             if mode in {"target", "anti_target"}:
                 target = getattr(self, "target_orbit", None)
-                if (self.vehicle != "space" or self.scenario != "orbital" or
+                if (self.vehicle != "space" or
                         not target or _norm3([target[i]-self.orbit[i] for i in range(3)]) < 1e-6):
                     raise ValueError("Target SAS requires a distinct orbital target")
             command["attitude_sas_mode"] = mode
@@ -1281,12 +1285,39 @@ class SimulationEngine:
             return "stability_assist"
         return selected
 
+    def _launch_sas_vectors(self):
+        """Physical ECI references; launch nose is +Z, orbital nose is +X."""
+        position, velocity = self.orbit[:3], self.orbit[3:]
+        radius=_norm3(position)
+        radial=[v/max(radius,1e-20) for v in position]
+        angular=_cross(position,velocity);length=_norm3(angular)
+        normal=[v/max(length,1e-20) for v in angular]
+        vectors={"radial_out":radial,"radial_in":[-v for v in radial]}
+        if length>1e-6:vectors.update(normal=normal,anti_normal=[-v for v in normal])
+        # Surface-relative velocity avoids aiming sideways with Earth's rotation on pad.
+        relative=[velocity[0]+OMEGA_EARTH*position[1],velocity[1]-OMEGA_EARTH*position[0],velocity[2]]
+        speed=_norm3(relative)
+        if speed>1.:
+            prograde=[v/speed for v in relative]
+            vectors.update(prograde=prograde,retrograde=[-v for v in prograde])
+        target=getattr(self,"target_orbit",None)
+        if target:
+            delta=[target[i]-position[i] for i in range(3)];distance=_norm3(delta)
+            if distance>1.:
+                vectors.update(target=[v/distance for v in delta],anti_target=[-v/distance for v in delta])
+        node=self.command.get("maneuver_direction_eci")
+        if node:vectors["maneuver_node"]=[v/_norm3(node) for v in node]
+        return vectors
+
     def _sas_state(self) -> dict[str, Any]:
         supported = self.vehicle == "space" and self.scenario == "orbital"
         if not supported or self.spacecraft_attitude is None:
             enabled = bool(self.command.get("sas_enabled")) and self.command["mode"] != "auto"
-            return dict(supported=True, enabled=enabled, mode="stability_assist",
-                        available_modes=["stability_assist"], markers={},
+            directions = self._launch_sas_vectors() if self.vehicle == "space" and getattr(self, "launch_vehicle_attitude", None) is not None else {}
+            markers = {key: dict(direction_eci=value, direction_body=self.launch_vehicle_attitude.vector_eci_to_body(value), axis="z") for key,value in directions.items()}
+            return dict(supported=True, enabled=enabled, mode=self.command.get("attitude_sas_mode", "stability_assist"),
+                        available_modes=["stability_assist", *directions], markers=markers,
+                        context="launch" if directions else "local",
                         manual_override=enabled and getattr(self, "_local_sas_override", False),
                         authority="gnc" if self.command["mode"] == "auto" else "pilot",
                         actuator="existing_vehicle_attitude_controller",
@@ -2838,6 +2869,19 @@ class SimulationEngine:
         period = self.launch_attitude_update_period_s
         start = copy.deepcopy(attitude)
         guidance_state = self._space_guidance_state()
+        if self.command.get("sas_enabled") and self.command["mode"] != "auto" and not getattr(self,"_local_sas_override",False):
+            mode=self.command.get("attitude_sas_mode")
+            if mode not in {"stability_assist","manual","lvlh"}:
+                direction=self._launch_sas_vectors().get(mode)
+                if direction is None:
+                    self.command["attitude_sas_mode"]="stability_assist"
+                else:
+                    radial,tangent,normal,_=attitude._local_frame(guidance_state[:3],guidance_state[3:])
+                    up=sum(a*b for a,b in zip(radial,direction))
+                    forward=sum(a*b for a,b in zip(tangent,direction))
+                    side=sum(a*b for a,b in zip(normal,direction))
+                    self.command["pitch_deg"]=math.degrees(math.asin(_clamp(up,-1.,1.)))
+                    self.command["roll_deg"]=math.degrees(math.atan2(side,forward))
         altitude = _norm3(guidance_state[:3])-EARTH_RADIUS
         thrust_N = (self.command["throttle_pct"]/100.0 *
                     self._thrust_at_altitude(altitude))

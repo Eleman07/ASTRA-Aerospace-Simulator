@@ -39,6 +39,9 @@ var mission_selection
 var sas_selection
 var sas_hud
 var sas_request_pending=false
+var controller_learn_axis=""
+var controller_learn_editor
+var controller_learn_baseline=[]
 var mode_selection
 var game_mode=false
 var game_state={}
@@ -573,7 +576,8 @@ func sync_sas():
     if sas_selection!=null:
         var sas=state.get("sas",{})
         var current_sas=str(sas.get("mode","manual")) if sas.get("enabled",false) else "manual"
-        var expected=["manual"]+sas.get("available_modes",[])
+        var expected=["manual"]
+        for entry in SasHUD.MODES:expected.append(entry[0])
         var existing=[]
         for i in range(sas_selection.item_count):existing.append(str(sas_selection.get_item_metadata(i)))
         if existing!=expected:
@@ -584,6 +588,8 @@ func sync_sas():
                     if entry[0]==key:caption=entry[2]
                 sas_selection.add_item(caption);sas_selection.set_item_metadata(sas_selection.item_count-1,key)
         for i in range(sas_selection.item_count):
+            var mode_key=str(sas_selection.get_item_metadata(i))
+            sas_selection.set_item_disabled(i,mode_key!="manual" and mode_key not in sas.get("available_modes",[]))
             if str(sas_selection.get_item_metadata(i))==current_sas:
                 sas_selection.select(i)
         sas_hud.update_state(sas)
@@ -884,11 +890,33 @@ func configure_controller_ui():
         binding.device=-1;binding.button_index=pair[1]
         InputMap.action_add_event(pair[0],binding)
 
+func route_hotas_menu_input(event):
+    if event is InputEventJoypadButton and event.device==pilot.primary and pilot.config.input_kind=="hotas":
+        _input(event)
+        return true
+    return false
+
 func _input(event):
     if event is InputEventJoypadMotion:
+        if controller_learn_axis!="" and event.device==pilot.primary and absf(event.axis_value-float(controller_learn_baseline[event.axis]))>.45:
+            if is_instance_valid(controller_learn_editor):controller_learn_editor.value=event.axis
+            controller_learn_axis=""
         get_viewport().set_input_as_handled()
         return
     if event is not InputEventJoypadButton or event.device!=pilot.primary:return
+    if pilot.config.input_kind=="hotas":
+        # Raw HOTAS button numbers must never invoke Xbox A/B/X/Y menu actions.
+        get_viewport().set_input_as_handled()
+        if not event.pressed:return
+        var binding=int(event.button_index)
+        if binding==int(pilot.config.arm_button):
+            if pilot.armed:automatic()
+            else:keyboard_active=false;pilot.arm(state)
+        elif binding==int(pilot.config.pause_button):toggle_play()
+        elif binding==int(pilot.config.gnc_button):automatic()
+        elif binding==int(pilot.config.sas_toggle_button) and pilot.armed:toggle_sas()
+        elif binding==int(pilot.config.sas_next_button) and pilot.armed:cycle_sas()
+        return
     if event.button_index==int(pilot.config.sas_toggle_button) or event.button_index==int(pilot.config.sas_next_button):
         get_viewport().set_input_as_handled()
         if event.pressed and pilot.armed:
@@ -937,6 +965,7 @@ func report_result(value):
 func window_panel(title,size=Vector2i(820,720)):
     var win=MenuWindow.new()
     win.title=title
+    win.hotas_input_router=Callable(self,"route_hotas_menu_input")
     win.size=size
     win.min_size=Vector2i(620,460)
     win.close_requested.connect(win.queue_free)
@@ -1137,15 +1166,33 @@ func show_controller():
             list.set_item_metadata(list.item_count-1,id)
             if id==pilot.get(slot[1]):list.select(list.item_count-1)
         list.item_selected.connect(func(index):
+            var previous_kind=pilot.config.input_kind
             if not pilot.assign_device(slot[1],list.get_item_metadata(index)):
                 for j in range(list.item_count):
                     if list.get_item_metadata(j)==pilot.get(slot[1]):list.select(j)
-                widgets.note.text="Dispositivo già assegnato: manetta e pedali richiedono periferiche distinte.")
+                widgets.note.text="Dispositivo già assegnato: manetta e pedali richiedono periferiche distinte."
+            elif previous_kind!=pilot.config.input_kind:
+                box.get_parent().get_parent().get_parent().queue_free();show_controller.call_deferred())
         box.add_child(list)
+    var profile_row=HBoxContainer.new();box.add_child(profile_row)
+    button("PROFILO T.FLIGHT HOTAS X · PC",func():
+        pilot.apply_profile(InputClass.hotas_profile());pilot.save_profile()
+        box.get_parent().get_parent().get_parent().queue_free();show_controller(),profile_row)
+    box.add_child(label_text("HOTAS X: selettore PC, preset automatico. Un solo dispositivo Primario include stick e manetta.
+Assi e pulsanti mostrati da 0: pulsante fisico 1 = indice 0. Usa RILEVA se il driver cambia ordine.",12))
+    var input_kind=OptionButton.new();input_kind.add_item("Xbox / gamepad");input_kind.add_item("HOTAS · manetta assoluta sul Primario")
+    input_kind.select(1 if pilot.config.input_kind=="hotas" else 0);box.add_child(input_kind)
+    var throttle_invert=CheckBox.new();throttle_invert.text="Inverti manetta assoluta";throttle_invert.button_pressed=pilot.config.throttle_inverted;box.add_child(throttle_invert)
     var fields={}
-    for setting in [["deadzone","Zona morta",0,.45],["expo","Esponenziale",0,1],["smoothing_s","Filtro · s",.001,.5],["sensitivity","Sensibilità stick",.25,2.5],["throttle_rate_pct_s","Velocità manetta · %/s",10,400],["orbital_slew_deg_s","Velocità riferimento orbitale · °/s",5,180],["roll_axis","Asse roll",0,15],["pitch_axis","Asse pitch",0,15],["yaw_axis","Asse yaw",0,15],["throttle_axis","Asse manetta",0,15],["sas_toggle_button","Pulsante SAS (−1 disabilita; 10 RB)",-1,20],["sas_next_button","Pulsante prossimo preset (−1 disabilita; 8 R3)",-1,20]]:
+    for setting in [["deadzone","Zona morta",0,.45],["expo","Esponenziale",0,1],["smoothing_s","Filtro · s",.001,.5],["sensitivity","Sensibilità stick",.25,2.5],["throttle_rate_pct_s","Velocità manetta · %/s",10,400],["orbital_slew_deg_s","Velocità riferimento orbitale · °/s",5,180],["roll_axis","Asse roll",0,15],["pitch_axis","Asse pitch",0,15],["yaw_axis","Asse yaw",0,15],["throttle_axis","Asse manetta",0,15],["pause_button","Pulsante pausa (HOTAS)",-1,20],["gnc_button","Pulsante GNC (HOTAS)",-1,20],["arm_button","Pulsante arma/disarma (HOTAS)",-1,20],["brakes_button","Pulsante freni",-1,20],["sas_toggle_button","Pulsante SAS (indice da 0)",-1,20],["sas_next_button","Pulsante prossimo preset (−1 disabilita; 8 R3)",-1,20]]:
         fields[setting[0]]=numeric(box,setting[1],pilot.config[setting[0]],setting[2],setting[3])
         if str(setting[0]).ends_with("_axis") or str(setting[0]).ends_with("_button"):fields[setting[0]].step=1
+        if str(setting[0]).ends_with("_axis"):
+            button("RILEVA · "+setting[1],func():
+                if pilot.primary not in Input.get_connected_joypads():return
+                pilot.disarm();controller_learn_axis=setting[0];controller_learn_editor=fields[setting[0]]
+                controller_learn_baseline=[]
+                for axis_id in range(16):controller_learn_baseline.append(Input.get_joy_axis(pilot.primary,axis_id)),box)
     var curve=OptionButton.new();curve.add_item("Lineare");curve.set_item_metadata(0,"linear")
     curve.add_item("Esponenziale · fine al centro");curve.set_item_metadata(1,"exponential")
     curve.select(1 if pilot.config.curve=="exponential" else 0);box.add_child(curve)
@@ -1155,7 +1202,13 @@ func show_controller():
     var monitor=Timer.new();monitor.wait_time=.1;box.add_child(monitor)
     monitor.timeout.connect(func():
         var axes=pilot.raw_axes()
+        var raw=[];var pressed_buttons=[]
+        if pilot.primary in Input.get_connected_joypads():
+            for axis_id in range(6):raw.append("%d: %.2f"%[axis_id,Input.get_joy_axis(pilot.primary,axis_id)])
+            for button_id in range(20):
+                if Input.is_joy_button_pressed(pilot.primary,button_id):pressed_buttons.append(str(button_id))
         live.text=("ARMATO" if pilot.armed else "DISARMATO")+" · RT/LT %.0f %% · R/P/Y %.2f / %.2f / %.2f\nAPI %.1f ms · %s"%[pilot.throttle,axes.x,axes.y,axes.z,pilot_rtt_ms,"in attesa di spinta" if not state.get("mission_started",false) else "in volo"]
+        live.text+="\nAssi grezzi: "+", ".join(raw)+"\nPulsanti premuti: "+", ".join(pressed_buttons)+("\nMUOVI SOLO L’ASSE DA ASSEGNARE" if controller_learn_axis!="" else "")
         if pilot_error!="":live.text+="\n"+pilot_error)
     monitor.start()
     button("PROFILO XBOX · RISPOSTA PRONTA",func():
@@ -1163,10 +1216,13 @@ func show_controller():
         for key in fields:fields[key].set_value_no_signal(pilot.config[key])
         curve.select(1 if pilot.config.curve=="exponential" else 0)
         inverted.set_pressed_no_signal(bool(pilot.config.invert_pitch))
+        input_kind.select(0);throttle_invert.set_pressed_no_signal(pilot.config.throttle_inverted)
         status.text="Profilo reattivo salvato. Calibra il centro a stick rilasciati, poi arma.",box)
     button("SALVA PROFILO PER QUESTO VEICOLO",func():
         var profile=pilot.config.duplicate(true)
         for key in fields:profile[key]=fields[key].value
+        profile.input_kind="hotas" if input_kind.selected==1 else "gamepad"
+        profile.throttle_inverted=throttle_invert.button_pressed
         profile.curve=str(curve.get_item_metadata(curve.selected))
         profile.invert_pitch=inverted.button_pressed
         if pilot.apply_profile(profile):pilot.save_profile();status.text="Profilo salvato · "+vehicle

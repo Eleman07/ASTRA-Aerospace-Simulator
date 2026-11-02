@@ -138,6 +138,28 @@ class OrbitalSASTests(unittest.TestCase):
             self.assertTrue(self.engine.state()["sas"]["supported"])
             self.assertTrue(self.engine.set_command({"sas_enabled": True})["sas"]["enabled"])
 
+    def test_launch_directional_sas_tracks_all_valid_references(self):
+        for mode in ('prograde','retrograde','normal','anti_normal','radial_in','radial_out','target','anti_target','maneuver_node'):
+            self.engine.reset('space',advanced_models=True)
+            self.engine.launch();self.engine.step(20)
+            payload={'mode':'manual','attitude_sas_mode':mode}
+            if mode=='maneuver_node':payload['maneuver_direction_eci']=[1,1,0]
+            before=self.engine.state()['attitude_quaternion_body_to_eci']
+            selected=self.engine.set_command(payload)
+            self.assertIn(mode,selected['sas']['available_modes'])
+            self.assertEqual(before,selected['attitude_quaternion_body_to_eci'])
+            result=self.engine.step(.1)
+            self.assertEqual(result['sas']['mode'],mode)
+            self.assertTrue(all(math.isfinite(v) for v in result['attitude_quaternion_body_to_eci']))
+            self.assertGreaterEqual(result['acs_propellant_kg'],0)
+            if mode=='retrograde':self.assertLess(result['command']['pitch_deg'],0)
+            if mode=='normal':self.assertAlmostEqual(result['command']['roll_deg'],90,delta=.1)
+            self.engine.set_command({'roll_deg':7,'pitch_deg':20,'sas_manual_input':True})
+            self.engine.step(.1)
+            self.assertTrue(self.engine.state()['sas']['manual_override'])
+            self.engine.set_command({'roll_deg':0,'pitch_deg':0,'sas_manual_input':False})
+            self.assertFalse(self.engine.state()['sas']['manual_override'])
+
     def test_launch_desktop_pitch_hold_survives_neutral_input(self):
         runtime=DesktopRuntime()
         runtime.dispatch('/desktop/free',{'vehicle':'space'},'POST')

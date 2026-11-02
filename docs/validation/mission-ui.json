@@ -7,7 +7,7 @@
   "physical_time_s": 51.2364689996886,
   "real_completed_mission": "proc1:space_lunar_precision:0",
   "renderer": "forward_plus",
-  "request_count": 8,
+  "request_count": 9,
   "result": {
     "active": true,
     "checkpoint_available": true,
@@ -138,5 +138,5 @@
   },
   "sas_hud": true,
   "search_filter": true,
-  "fixture_sha256": "c2d7f1c2eb73dd30df6a2ab120f8c6689bec43e802814c930cfe09d1c636ee81"
+  "fixture_sha256": "efafd8359cdc3b56fe01463d5214fd83c9767108a66f48881ffa1ad7276fe124"
 }

@@ -14,8 +14,8 @@ import sys
 import zipfile
 
 ROOT=Path(__file__).resolve().parents[1]
-VERSION='2.5.2'
-SDK_VERSION='2.5.2'
+VERSION='2.5.3'
+SDK_VERSION='2.5.3'
 TOOLCHAIN=ROOT/'build/toolchain/godot'
 PAYLOAD=ROOT/f'dist/ASTRA-Desktop-{VERSION}'
 
@@ -124,6 +124,8 @@ func _initialize():
     python_license=Path(sys.base_prefix)/'LICENSE.txt'
     if python_license.is_file():shutil.copy2(python_license,PAYLOAD/'PYTHON-LICENSE.txt')
     shutil.copy2(ROOT/'astra-client.py',PAYLOAD/'astra-client.py')
+    shutil.copy2(ROOT/'docs/HOTAS-X.md',PAYLOAD/'GUIDA-HOTAS-X.txt')
+    shutil.copy2(ROOT/'docs/SAS.md',PAYLOAD/'GUIDA-SAS.txt')
     wheel=build_sdk();shutil.copy2(wheel,PAYLOAD/wheel.name)
     if (ROOT/'docs/DESKTOP_NATIVE_IT.md').exists():shutil.copy2(ROOT/'docs/DESKTOP_NATIVE_IT.md',PAYLOAD/'GUIDA-DESKTOP.txt')
     subprocess.run([str(PAYLOAD/'ASTRA.exe'),'--self-test'],check=True,cwd=ROOT)

@@ -25,6 +25,11 @@ def prepare_fixture(path):
         runtime.dispatch("/desktop/free", dict(vehicle="space", scenario="orbital", advanced_models=True), "POST")
         runtime.dispatch("/command", dict(mode="manual", sas_enabled=True), "POST")
         sas = runtime.dispatch("/desktop/snapshot")
+        runtime.dispatch("/reset", dict(vehicle="space", advanced_models=True), "POST")
+        runtime.dispatch("/launch", {}, "POST")
+        runtime.dispatch("/step", dict(dt_s=20), "POST")
+        runtime.dispatch("/command", dict(mode="manual", attitude_sas_mode="normal"), "POST")
+        launch_sas=runtime.dispatch("/desktop/snapshot")
         mission_id = "proc1:space_lunar_precision:0"
         runtime.dispatch("/desktop/game/start", dict(mission_id=mission_id, language="it"), "POST")
         runtime.dispatch("/command", dict(mode="auto"), "POST")
@@ -53,7 +58,7 @@ def prepare_fixture(path):
                 else:
                     difficulty_total = response["_meta"]["total"]
         fixture = dict(schema=1, provenance="Unmodified DesktopRuntime.dispatch responses; real engine integration; isolated career",
-                       sas=sas, success=success, steps=steps, dt_s=.5, models=runtime.dispatch("/models"),
+                       sas=sas, launch_sas=launch_sas, success=success, steps=steps, dt_s=.5, models=runtime.dispatch("/models"),
                        responses=responses, difficulty_total=difficulty_total, search_total=search_total,
                        search_query=search_query)
         path.write_text(json.dumps(fixture, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -104,7 +109,7 @@ def main():
     report["fixture_sha256"] = hashlib.sha256(fixture.read_bytes()).hexdigest()
     (output / "report.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     if args.publish and not args.headless:
-        for filename in ("sas-hud.png", "mission-board.png", "mission-result.png"):
+        for filename in ("sas-hud.png", "launch-sas-hud.png", "mission-board.png", "mission-result.png"):
             shutil.copy2(output / filename, ROOT / "docs/images" / filename)
         shutil.copy2(output / "report.json", ROOT / "docs/validation/mission-ui.json")
     print(json.dumps({key:value for key,value in report.items() if key != "result"}, indent=2))

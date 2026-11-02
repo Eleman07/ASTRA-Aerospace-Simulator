@@ -1,0 +1,109 @@
+{
+  "version": "2.5.3",
+  "python_suite": {
+    "tests": 129,
+    "passed": 127,
+    "skipped": 2
+  },
+  "sas_tests": 16,
+  "physical_hotas_connected": false,
+  "input": {
+    "version": "2.5.3",
+    "result": "PASS",
+    "test_backend": "Godot headless with injected GUI events",
+    "source_sha256": {
+      "desktop/main.gd": "276fbdc4934d896eeb9fd5729f6412be83b8c5368e03a0bb27b5613b5d61f157",
+      "desktop/native_input.gd": "6ed5ad7b08e21e345505304ce868482ac4be3fcd9c8dcd79bbbc94d7e51e10f2",
+      "desktop/menu_window.gd": "2274cd5e03a7493a785afcdbe6ff8fa9bcd9b4a5570e4ebf29f3bdbc2cedc139",
+      "tools/test_input_pipeline.gd": "a40beb53ac679df2b058282c8ee5b73a56705a94d4d2e6d6392ad9ff40262130"
+    },
+    "sticks_do_not_navigate": true,
+    "child_window_values_unchanged": true,
+    "dpad_navigates": true,
+    "a_confirms": true,
+    "b_closes_panel": true,
+    "start_toggles_once": true,
+    "python_clock_exclusive": true,
+    "hotas_profile": true,
+    "hotas_absolute_throttle": true,
+    "hotas_button_routing": true,
+    "hotas_child_menu_isolation": true,
+    "physical_controller_test": false
+  },
+  "package": {
+    "adapter": "NVIDIA GeForce RTX 5080 Laptop GPU",
+    "api_url": "http://127.0.0.1:62414",
+    "browser_required": false,
+    "fps": 30.0,
+    "frame_p95_ms": 33.3333333333333,
+    "frames": 947,
+    "native": true,
+    "physics_clock_owner": "external",
+    "renderer": "forward_plus",
+    "scenario": "mission",
+    "science_disciplines": 13,
+    "screenshot_saved": true,
+    "solvers": 18,
+    "time_s": 0.4,
+    "vehicle": "drone",
+    "frozen_host": "PASS",
+    "offline_wheel": "PASS",
+    "wheel_import_path": "C:\\ASTRA-Aerospace-Simulator\\test-results\\desktop-sdk-installed\\astra\\client.py",
+    "free_flight_api": "PASS",
+    "detailed_instruments_api": "PASS",
+    "independent_sdk": "PASS",
+    "legacy_module_collision": "PASS",
+    "game_activities": [
+      "aircraft",
+      "drone",
+      "space"
+    ],
+    "game_missions": 12,
+    "career_categories": {
+      "INGEGNERIA": 3,
+      "ESPLORAZIONE": 3,
+      "PILOTAGGIO": 3,
+      "SCIENZA": 3
+    },
+    "exact_external_clock": "PASS",
+    "python_mode": "PASS",
+    "camera_api": "PASS",
+    "real_png_capture": {
+      "id": "fef91698a622ec8f58eb7d66",
+      "path": "C:\\ASTRA-Aerospace-Simulator\\test-results\\sdk-real-capture.png",
+      "include_ui": false,
+      "status": "CAPTURED",
+      "error": "",
+      "bytes": 357088,
+      "width": 1440,
+      "height": 900
+    },
+    "presentation_does_not_advance_physics": true,
+    "desktop_version": "2.5.3",
+    "host_sha256": "76045042daead39fcabb199b3cee22e1441fa7aa5ff03bb3320b5eab33b14f1e",
+    "renderer_sha256": "3a9b2c34b85f94425d3002d1b8582516bc372c41c43477fbb7bd24d0c7aabc9e",
+    "sdk_sha256": "21c97cf3f7540100ccb7bc2ee6bd32ea8f445dbf351aa3718e5ca0d6c1f62a5a"
+  },
+  "launch_sas_hud": "docs/images/launch-sas-hud.png",
+  "source_sha256": {
+    "astra/engine.py": "10729820c1028067955832fb0b4bd4bb0feec67442c5f6bf70a0b312ee774277",
+    "desktop/main.gd": "276fbdc4934d896eeb9fd5729f6412be83b8c5368e03a0bb27b5613b5d61f157",
+    "desktop/native_input.gd": "6ed5ad7b08e21e345505304ce868482ac4be3fcd9c8dcd79bbbc94d7e51e10f2",
+    "desktop/sas_hud.gd": "ee5a8391d9a9b6f34f69172b0aeb9c4996c505fb40553102372bc6bcb307e1b9",
+    "desktop/menu_window.gd": "2274cd5e03a7493a785afcdbe6ff8fa9bcd9b4a5570e4ebf29f3bdbc2cedc139"
+  },
+  "installer": {
+    "version": "2.5.3",
+    "installer": "ASTRA-Desktop-2.5.3-Windows-x64-Setup.exe",
+    "bytes": 182603266,
+    "sha256": "65c787b3e0f1f0828f4579f38da615a2a26d06f8f7272a6de6765410e3d27216",
+    "payload_manifest_sha256": "828f8e966f0ace2c4568ed4b5c57fa3e37a79d4432bf1cfd2cc826e66062666a",
+    "runtime_self_test": "PASS",
+    "installer_test": "PASS",
+    "sdk": "astra_simulator_client-2.5.3-py3-none-any.whl",
+    "sdk_sha256": "21c97cf3f7540100ccb7bc2ee6bd32ea8f445dbf351aa3718e5ca0d6c1f62a5a",
+    "installed_files_verified": 157,
+    "uninstaller_test": "PASS",
+    "user_files_preserved": true
+  }
+}

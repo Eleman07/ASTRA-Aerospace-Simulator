@@ -26,7 +26,7 @@ func run():
     app.sas_hud.update_state({"supported":true,"enabled":true,"mode":"prograde","available_modes":["stability_assist","prograde","retrograde"],"markers":{}})
     assert(app.sas_hud.visible and app.sas_hud.toggle_button.text.contains("ON"))
     assert(app.sas_hud.mode_buttons.prograde.visible and app.sas_hud.mode_buttons.prograde.button_pressed)
-    assert(not app.sas_hud.mode_buttons.target.visible and not app.sas_hud.mode_buttons.maneuver_node.visible)
+    assert(app.sas_hud.mode_buttons.target.disabled and app.sas_hud.mode_buttons.maneuver_node.disabled)
     app.sas_hud.update_state({"supported":false})
     assert(app.sas_hud.visible)
     print("GIOCA UI PASS: 3 activity choices, career board entry, simulator list preserved, orbital SAS choices available")

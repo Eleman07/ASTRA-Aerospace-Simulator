@@ -26,7 +26,7 @@ def main():
     report=dict(version=build['version'],result='PASS',test_backend='Godot headless with injected GUI events',
         source_sha256=hashes,sticks_do_not_navigate=True,child_window_values_unchanged=True,
         dpad_navigates=True,a_confirms=True,b_closes_panel=True,start_toggles_once=True,
-        python_clock_exclusive=True,physical_controller_test=False)
+        python_clock_exclusive=True,hotas_profile=True,hotas_absolute_throttle=True,hotas_button_routing=True,hotas_child_menu_isolation=True,physical_controller_test=False)
     (ROOT/'test-results/input-routing-validation.json').write_text(json.dumps(report,indent=2)+'\n',encoding='utf-8')
     print(json.dumps(report,indent=2))
 

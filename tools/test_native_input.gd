@@ -68,6 +68,30 @@ func _initialize():
     pilot.smooth_axes=Vector3.ZERO
     var immediate=pilot.advance(.04,{},Vector3.RIGHT,0,0,false)
     assert(immediate.roll_deg>28.9)
+    assert(NativeInput.is_tflight_name("Thrustmaster T.Flight Hotas X"))
+    assert(not NativeInput.is_tflight_name("Xbox Wireless Controller"))
+    assert(pilot.apply_profile(NativeInput.hotas_profile()))
+    assert(pilot.config.input_kind=="hotas" and pilot.config.sas_toggle_button==0)
+    assert(not pilot.apply_profile({"sas_next_button":0}))
+    assert(not pilot.apply_profile({"throttle_inverted":"yes"}))
+    assert(pilot.throttle_percentage(1)==0 and pilot.throttle_percentage(-1)==100)
+    pilot.throttle=20;pilot.pickup=false;pilot.previous_collective=80
+    var absolute_command=pilot.advance(.1,{},Vector3.ZERO,0,0,false,80)
+    assert(absolute_command.throttle_pct==20) # no jump before matching lever
+    absolute_command=pilot.advance(.1,{},Vector3.ZERO,0,0,false,19)
+    assert(absolute_command.throttle_pct==19 and pilot.pickup)
+    absolute_command=pilot.advance(.1,{},Vector3.ZERO,0,0,false,100)
+    assert(absolute_command.throttle_pct==100)
+    assert(pilot.apply_profile({"throttle_inverted":false}))
+    assert(pilot.throttle_percentage(-1)==0 and pilot.throttle_percentage(1)==100)
+    pilot.vehicle="aircraft";pilot.smooth_axes=Vector3.ZERO
+    var pulled_back=pilot.advance(.1,{},Vector3(0,1,0),0,0,false,50)
+    assert(pulled_back.pitch_deg>17)
+    pilot.smooth_axes=Vector3.ZERO
+    var orbital_pull=pilot.advance(.1,{"scenario":"orbital"},Vector3(0,1,0),0,0,false,50)
+    assert(orbital_pull.attitude_torque_body_fraction[1]>.99)
+    print("HOTAS PASS: dedicated profile, axis mapping, button conflict rejection, absolute throttle inversion and pickup without jump")
+    print("PHYSICAL DEVICES: ",Input.get_connected_joypads())
     print("NATIVE INPUT PASS: deadzone, expo, endpoints, asymmetric calibration, atomic validation, neutral arm, disconnect and calibration lifecycle")
     print("RESPONSIVENESS PASS: 0-100% in 0.8s at 10/25/62.5/200fps, direct orbital torque, retained throttle, distinct devices")
     quit()

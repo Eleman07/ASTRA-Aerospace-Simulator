@@ -49,7 +49,16 @@ func update_state(data):
     var mode=str(data.get("mode","stability_assist"))
     status_label.text="INPUT MANUALE · SAS IN ATTESA" if data.get("manual_override",false) else "SAS · "+mode.replace("_"," ").to_upper() if enabled else "GNC AUTO" if data.get("authority")=="gnc" else "STABILIZZAZIONE · SAS OFF"
     for key in mode_buttons:
-        mode_buttons[key].visible=key in data.get("available_modes",[])
+        var valid=key in data.get("available_modes",[])
+        mode_buttons[key].visible=true
+        mode_buttons[key].disabled=not valid
+        var reason=""
+        if not valid:
+            if key=="maneuver_node":reason="Definisci un nodo di manovra con direzione ECI."
+            elif key in ["target","anti_target"]:reason="Serve un bersaglio spaziale distinto."
+            elif data.get("context","")=="launch" and key in ["prograde","retrograde"]:reason="Serve velocità rispetto al suolo superiore a 1 m/s."
+            else:reason="Questo veicolo usa Stability Assist; scegli un lanciatore o rendezvous orbitale per i riferimenti spaziali."
+        mode_buttons[key].tooltip_text=key.replace("_"," ").capitalize()+(" · "+reason if reason!="" else "")
         mode_buttons[key].set_pressed_no_signal(enabled and key==mode)
     queue_redraw()
 
@@ -64,6 +73,7 @@ func _draw():
         var body=telemetry.markers[key].get("direction_body",[1,0,0])
         if body.size()!=3:continue
         var v=Vector3(float(body[0]),float(body[1]),float(body[2])).normalized()
+        if telemetry.markers[key].get("axis","x")=="z":v=Vector3(v.z,v.x,-v.y)
         # Azimuthal projection: forward at center, rear hemisphere at rim.
         var lateral=Vector2(v.y,-v.z)
         if v.x<0 and lateral.length_squared()<0.000001:lateral=Vector2.DOWN

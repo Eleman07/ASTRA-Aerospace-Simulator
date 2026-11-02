@@ -14,9 +14,21 @@ var previous_buttons = {}
 var pickup = false
 var previous_collective = 0.0
 const DEFAULT_CONFIG = {"deadzone":0.08,"expo":0.10,"curve":"linear","smoothing_s":0.012,"invert_pitch":false,
+    "input_kind":"gamepad","throttle_inverted":true,"brakes_button":9,"pause_button":6,"gnc_button":2,"arm_button":3,
     "sensitivity":1.8,"throttle_rate_pct_s":140.0,"orbital_slew_deg_s":90.0,
     "roll_axis":0,"pitch_axis":1,"yaw_axis":2,"throttle_axis":3,"sas_toggle_button":10,"sas_next_button":8,
     "centers":[0.0,0.0,0.0],"minimums":[-1.0,-1.0,-1.0],"maximums":[1.0,1.0,1.0],"profile":"Xbox / standard"}
+static func hotas_profile():
+    var profile=DEFAULT_CONFIG.duplicate(true)
+    profile.merge({"profile":"Thrustmaster T.Flight HOTAS X · PC","input_kind":"hotas","sensitivity":1.0,
+        "roll_axis":0,"pitch_axis":1,"yaw_axis":3,"throttle_axis":2,"deadzone":.06,
+        "sas_toggle_button":0,"sas_next_button":1,"brakes_button":2,"pause_button":7,"gnc_button":8,"arm_button":9},true)
+    return profile
+
+static func is_tflight_name(name_value):
+    var name_lower=str(name_value).to_lower().replace("-","").replace(".","").replace(" ","")
+    return "tflight" in name_lower and ("hotas" in name_lower or "stick" in name_lower)
+
 var config = DEFAULT_CONFIG.duplicate(true)
 var calibration_min = []
 var calibration_max = []
@@ -47,13 +59,20 @@ func apply_profile(data):
     if float(next.sensitivity)<.25 or float(next.sensitivity)>2.5:return false
     if float(next.throttle_rate_pct_s)<10 or float(next.throttle_rate_pct_s)>400:return false
     if float(next.orbital_slew_deg_s)<5 or float(next.orbital_slew_deg_s)>180:return false
-    for key in ["sas_toggle_button","sas_next_button"]:
+    for key in ["sas_toggle_button","sas_next_button","brakes_button","pause_button","gnc_button","arm_button"]:
         if not (next[key] is float or next[key] is int):return false
         if not is_finite(float(next[key])) or float(next[key])!=floorf(float(next[key])):return false
         if int(next[key]) < -1 or int(next[key])>20:return false
         # Preserve menu navigation, arming, pause, GNC, and brakes bindings.
-        if int(next[key]) in [0,1,2,3,6,9,11,12,13,14]:return false
+        if next.input_kind=="gamepad" and key in ["sas_toggle_button","sas_next_button"] and int(next[key]) in [0,1,2,3,6,9,11,12,13,14]:return false
         next[key]=int(next[key])
+    if next.input_kind not in ["gamepad","hotas"] or not next.throttle_inverted is bool:return false
+    if next.input_kind=="hotas":
+        var occupied=[]
+        for key in ["sas_toggle_button","sas_next_button","brakes_button","pause_button","gnc_button","arm_button"]:
+            if next[key]>=0:
+                if next[key] in occupied:return false
+                occupied.append(next[key])
     if next.sas_toggle_button>=0 and next.sas_toggle_button==next.sas_next_button:return false
     for key in ["roll_axis","pitch_axis","yaw_axis","throttle_axis"]:
         if float(next[key])!=floorf(float(next[key])) or int(next[key])<0 or int(next[key])>15:return false
@@ -91,6 +110,9 @@ func assign_device(slot,id):
             if other!=slot and id==get(other):return false
     disarm()
     set(slot,id)
+    if slot=="primary" and id in Input.get_connected_joypads() and is_tflight_name(Input.get_joy_name(id)) and config.input_kind!="hotas":
+        apply_profile(hotas_profile())
+        save_profile()
     if slot=="primary" and id>=0:
         if throttle_device==id:throttle_device=-1
         if pedals_device==id:pedals_device=-1
@@ -168,11 +190,14 @@ func arm(state):
     var angles = state.get("attitude_target_deg",[0,0,0])
     target = Vector3(float(angles[0]),float(angles[1]),float(angles[2]))
     smooth_axes = Vector3.ZERO
-    pickup = throttle_device < 0
+    pickup = throttle_device < 0 and config.input_kind!="hotas"
+    var collective_device=primary if config.input_kind=="hotas" else throttle_device
+    if collective_device in Input.get_connected_joypads():
+        previous_collective=throttle_percentage(Input.get_joy_axis(collective_device,int(config.throttle_axis)))
     return true
 
 func pressed(button):
-    return primary in Input.get_connected_joypads() and Input.is_joy_button_pressed(primary,button)
+    return button>=0 and primary in Input.get_connected_joypads() and Input.is_joy_button_pressed(primary,button)
 
 func rising(button):
     var value = pressed(button)
@@ -192,9 +217,15 @@ func sample(dt,state):
         disarm()
         return {"disconnected":true}
     var absolute=null
-    if throttle_device>=0:absolute=clampf((1.0-Input.get_joy_axis(throttle_device,int(config.throttle_axis)))*50.0,0.0,100.0)
-    return advance(dt,state,raw_axes(),maxf(0.0,Input.get_joy_axis(primary,JOY_AXIS_TRIGGER_RIGHT)),
-        maxf(0.0,Input.get_joy_axis(primary,JOY_AXIS_TRIGGER_LEFT)),pressed(JOY_BUTTON_LEFT_SHOULDER),absolute)
+    var collective_device=primary if config.input_kind=="hotas" else throttle_device
+    if collective_device>=0:
+        absolute=throttle_percentage(Input.get_joy_axis(collective_device,int(config.throttle_axis)))
+    var up=0.0 if config.input_kind=="hotas" else maxf(0.0,Input.get_joy_axis(primary,JOY_AXIS_TRIGGER_RIGHT))
+    var down=0.0 if config.input_kind=="hotas" else maxf(0.0,Input.get_joy_axis(primary,JOY_AXIS_TRIGGER_LEFT))
+    return advance(dt,state,raw_axes(),up,down,pressed(int(config.brakes_button)),absolute)
+
+func throttle_percentage(raw):
+    return clampf((1.0-raw if config.throttle_inverted else 1.0+raw)*50.0,0.0,100.0)
 
 func advance(dt,state,axes,up,down,brakes,absolute=null):
     # Called on every rendered frame, independent of HTTP availability. Only
@@ -214,8 +245,11 @@ func advance(dt,state,axes,up,down,brakes,absolute=null):
     var command = {"mode":"manual","throttle_pct":throttle,"roll_deg":smooth_axes.x*roll_limit,
         "pitch_deg":-smooth_axes.y*pitch_limit,"yaw_deg":smooth_axes.z*30.0,
         "brakes_pct":100.0 if brakes else 0.0}
+    if config.input_kind=="hotas" and vehicle=="aircraft":
+        # PC joystick Y is positive when pulled back: command nose-up pitch.
+        command.pitch_deg=smooth_axes.y*pitch_limit
     if state.get("scenario")=="orbital":
-        command.attitude_torque_body_fraction = [smooth_axes.x,-smooth_axes.y,smooth_axes.z]
+        command.attitude_torque_body_fraction = [smooth_axes.x,smooth_axes.y if config.input_kind=="hotas" else -smooth_axes.y,smooth_axes.z]
     if vehicle=="space" and state.get("scenario") not in ["orbital","planetary"]:
         command.pitch_deg = clampf(90.0+smooth_axes.y*45.0,-45,90)
     return command

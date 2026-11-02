@@ -70,11 +70,17 @@ func run():
     app.scene.distance = 16
     app.scene.azimuth = .8
     if not require(app.sas_hud.visible and app.sas_hud.toggle_button.text.contains("ON"), "SAS HUD missing"): return
-    if not require(not app.sas_hud.mode_buttons.maneuver_node.visible, "Invalid node mode displayed"): return
+    if not require(app.sas_hud.mode_buttons.maneuver_node.disabled, "Invalid node mode displayed"): return
     await create_timer(1.1).timeout
     app.update_hud()
     await capture(args[2].path_join("sas-hud.png"))
 
+    if fixture.has("launch_sas"):
+        app.active_snapshot=fixture.launch_sas
+        await app.poll()
+        if not require(not app.sas_hud.mode_buttons.normal.disabled and not app.sas_hud.mode_buttons.prograde.disabled,"Launch SAS modes unavailable"):return
+        app.scene.distance=45;app.scene.azimuth=.8
+        await capture(args[2].path_join("launch-sas-hud.png"))
     app.active_snapshot = fixture.success
     app.game_result_seen = str(fixture.success.game.mission.id)
     await app.poll()
