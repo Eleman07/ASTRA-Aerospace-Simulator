@@ -1166,19 +1166,23 @@ func show_controller():
             list.set_item_metadata(list.item_count-1,id)
             if id==pilot.get(slot[1]):list.select(list.item_count-1)
         list.item_selected.connect(func(index):
-            var previous_kind=pilot.config.input_kind
+            var previous_profile=pilot.config.profile
             if not pilot.assign_device(slot[1],list.get_item_metadata(index)):
                 for j in range(list.item_count):
                     if list.get_item_metadata(j)==pilot.get(slot[1]):list.select(j)
                 widgets.note.text="Dispositivo già assegnato: manetta e pedali richiedono periferiche distinte."
-            elif previous_kind!=pilot.config.input_kind:
+            elif previous_profile!=pilot.config.profile:
                 box.get_parent().get_parent().get_parent().queue_free();show_controller.call_deferred())
         box.add_child(list)
     var profile_row=HBoxContainer.new();box.add_child(profile_row)
+    button("PROFILO T.FLIGHT HOTAS ONE · PC",func():
+        pilot.apply_profile(InputClass.hotas_one_profile());pilot.save_profile()
+        box.get_parent().get_parent().get_parent().queue_free();show_controller(),profile_row)
     button("PROFILO T.FLIGHT HOTAS X · PC",func():
         pilot.apply_profile(InputClass.hotas_profile());pilot.save_profile()
         box.get_parent().get_parent().get_parent().queue_free();show_controller(),profile_row)
-    box.add_child(label_text("HOTAS X: selettore PC, preset automatico. Un solo dispositivo Primario include stick e manetta.
+    box.add_child(label_text("HOTAS One: selettore PC prima di collegarlo, driver Thrustmaster installato. HOTAS X: preset automatico.
+Un solo dispositivo Primario include stick e manetta.
 Assi e pulsanti mostrati da 0: pulsante fisico 1 = indice 0. Usa RILEVA se il driver cambia ordine.",12))
     var input_kind=OptionButton.new();input_kind.add_item("Xbox / gamepad");input_kind.add_item("HOTAS · manetta assoluta sul Primario")
     input_kind.select(1 if pilot.config.input_kind=="hotas" else 0);box.add_child(input_kind)
@@ -1204,7 +1208,7 @@ Assi e pulsanti mostrati da 0: pulsante fisico 1 = indice 0. Usa RILEVA se il dr
         var axes=pilot.raw_axes()
         var raw=[];var pressed_buttons=[]
         if pilot.primary in Input.get_connected_joypads():
-            for axis_id in range(6):raw.append("%d: %.2f"%[axis_id,Input.get_joy_axis(pilot.primary,axis_id)])
+            for axis_id in range(8):raw.append("%d: %.2f"%[axis_id,Input.get_joy_axis(pilot.primary,axis_id)])
             for button_id in range(20):
                 if Input.is_joy_button_pressed(pilot.primary,button_id):pressed_buttons.append(str(button_id))
         live.text=("ARMATO" if pilot.armed else "DISARMATO")+" · RT/LT %.0f %% · R/P/Y %.2f / %.2f / %.2f\nAPI %.1f ms · %s"%[pilot.throttle,axes.x,axes.y,axes.z,pilot_rtt_ms,"in attesa di spinta" if not state.get("mission_started",false) else "in volo"]

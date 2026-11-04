@@ -29,5 +29,11 @@ func run():
     assert(app.sas_hud.mode_buttons.target.disabled and app.sas_hud.mode_buttons.maneuver_node.disabled)
     app.sas_hud.update_state({"supported":false})
     assert(app.sas_hud.visible)
+    app.show_controller()
+    var profile_found=false
+    for node in app.find_children("*","Button",true,false):
+        if node.text=="PROFILO T.FLIGHT HOTAS ONE · PC":profile_found=true
+    assert(profile_found)
+    print("HOTAS ONE UI PASS: dedicated selectable PC profile")
     print("GIOCA UI PASS: 3 activity choices, career board entry, simulator list preserved, orbital SAS choices available")
     quit()

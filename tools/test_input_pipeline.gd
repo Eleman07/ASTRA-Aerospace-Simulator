@@ -141,6 +141,14 @@ func run():
     Input.parse_input_event(in_menu);await process_frame
     if not require(flight.sas_count==4 and button_calls[0]==1,"HOTAS trigger leaked into child-window GUI"):return
     hotas_menu.queue_free();await process_frame
+    pilot.apply_profile(NativeInput.hotas_one_profile());pilot.armed=true
+    for number in [pilot.config.sas_toggle_button,pilot.config.sas_next_button,pilot.config.brakes_button,pilot.config.pause_button,pilot.config.gnc_button]:
+        var one_event=InputEventJoypadButton.new();one_event.device=0;one_event.button_index=number;one_event.pressed=true
+        Input.parse_input_event(one_event);await process_frame
+        one_event=InputEventJoypadButton.new();one_event.device=0;one_event.button_index=number;one_event.pressed=false
+        Input.parse_input_event(one_event);await process_frame
+    if not require(flight.sas_count==5 and flight.sas_cycle_count==3 and flight.play_count==3 and flight.gnc_count==2 and button_calls[0]==1,"HOTAS One buttons misrouted"):return
+    print("HOTAS ONE ROUTING PASS: dedicated bindings dispatch SAS/cycle/pause/GNC once; no Xbox GUI activation")
     flight.desktop={"clock_owner":"external"}
     if not require(flight.collect_pilot(.02).is_empty() and not pilot.armed,"Python clock must retain exclusive control"):return
     print("INPUT PIPELINE PASS: exact settings, no lost time, sticks isolated in root and child menus, D-pad navigates, A confirms, B closes panel, Start toggles once, Python clock exclusive")

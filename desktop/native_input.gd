@@ -25,6 +25,25 @@ static func hotas_profile():
         "sas_toggle_button":0,"sas_next_button":1,"brakes_button":2,"pause_button":7,"gnc_button":8,"arm_button":9},true)
     return profile
 
+static func hotas_one_profile():
+    var profile=hotas_profile()
+    profile.merge({"profile":"Thrustmaster T.Flight HOTAS One · PC",
+        "sas_toggle_button":0,"sas_next_button":1,"brakes_button":2,
+        "pause_button":8,"gnc_button":7,"arm_button":4},true)
+    return profile
+
+static func is_hotas_one_name(name_value):
+    var normalized=str(name_value).to_lower().replace("-","").replace(".","").replace(" ","").replace("_","")
+    return "tflighthotasone" in normalized
+
+func load_hotas_one_profile():
+    var settings_file=ConfigFile.new()
+    var profile=hotas_one_profile()
+    if settings_file.load("user://controller-profiles.cfg")==OK:
+        for key in profile:profile[key]=settings_file.get_value(vehicle+"/hotas_one",key,profile[key])
+    # Invalid saved settings fall back atomically to the dedicated defaults.
+    if not apply_profile(profile):apply_profile(hotas_one_profile())
+
 static func is_tflight_name(name_value):
     var name_lower=str(name_value).to_lower().replace("-","").replace(".","").replace(" ","")
     return "tflight" in name_lower and ("hotas" in name_lower or "stick" in name_lower)
@@ -45,6 +64,8 @@ func load_profile(kind):
         for key in config:
             data[key] = file.get_value(kind,key,config[key])
         apply_profile(data)
+    if primary in Input.get_connected_joypads() and is_hotas_one_name(Input.get_joy_name(primary)):
+        load_hotas_one_profile()
     disarm()
 
 func apply_profile(data):
@@ -92,8 +113,9 @@ func apply_profile(data):
 func save_profile():
     var file = ConfigFile.new()
     file.load("user://controller-profiles.cfg")
+    var section=vehicle+"/hotas_one" if is_hotas_one_name(config.profile) else vehicle
     for key in config:
-        file.set_value(vehicle,key,config[key])
+        file.set_value(section,key,config[key])
     file.save("user://controller-profiles.cfg")
 
 func disarm():
@@ -110,9 +132,13 @@ func assign_device(slot,id):
             if other!=slot and id==get(other):return false
     disarm()
     set(slot,id)
-    if slot=="primary" and id in Input.get_connected_joypads() and is_tflight_name(Input.get_joy_name(id)) and config.input_kind!="hotas":
-        apply_profile(hotas_profile())
-        save_profile()
+    if slot=="primary" and id in Input.get_connected_joypads():
+        var device_name=Input.get_joy_name(id)
+        if is_hotas_one_name(device_name):
+            load_hotas_one_profile()
+        elif is_tflight_name(device_name) and (config.input_kind!="hotas" or is_hotas_one_name(config.profile)):
+            load_profile(vehicle)
+            if config.input_kind!="hotas" or is_hotas_one_name(config.profile):apply_profile(hotas_profile())
     if slot=="primary" and id>=0:
         if throttle_device==id:throttle_device=-1
         if pedals_device==id:pedals_device=-1
